@@ -12,8 +12,4 @@ out/
 # misc
 .DS_Store
 *.log
-.env.example
-tsconfig.tsbuildinfo
-
-# env files for backend
-backend/.env
+.vercel
