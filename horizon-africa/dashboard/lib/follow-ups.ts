@@ -17,8 +17,6 @@ interface FollowUpLead {
   id: number;
   phone_number: string;
   full_name: string | null;
-  offered_package: string | null;
-  product_interest: string | null;
   follow_up_date: string | null;
 }
 
@@ -53,7 +51,7 @@ export async function sendFollowUps(): Promise<FollowUpResult> {
 
   const { data: leads, error } = await supabase
     .from("leads")
-    .select("id, phone_number, full_name, offered_package, product_interest, follow_up_date")
+    .select("id, phone_number, full_name, follow_up_date")
     .eq("follow_up_requested", true)
     .eq("follow_up_sent", false)
     .lte("follow_up_date", new Date().toISOString())
@@ -69,7 +67,6 @@ export async function sendFollowUps(): Promise<FollowUpResult> {
     result.processed++;
     const phone = lead.phone_number.replace(/\D/g, "");
     const name = lead.full_name ?? "there";
-    const pkg = lead.offered_package ?? lead.product_interest ?? "fibre";
     const expiry = computeExpiryDate(lead.follow_up_date);
 
     const payload = {
@@ -82,15 +79,9 @@ export async function sendFollowUps(): Promise<FollowUpResult> {
         language: { code: "en_US" },
         components: [
           {
-            type: "header",
-            parameters: [
-              { type: "text", text: name },
-              { type: "text", text: pkg },
-            ],
-          },
-          {
             type: "body",
             parameters: [
+              { type: "text", text: name },
               { type: "text", text: expiry },
             ],
           },

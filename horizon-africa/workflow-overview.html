@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Horizon Africa — AI Workflow Overview</title>
+<title>Horizon Africa — Technical Workflow Architecture</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f0f2f5;
+    background: #0f1117;
     color: #1a1a2e;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
   .page {
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
     background: #fff;
     min-height: 100vh;
@@ -55,109 +55,262 @@
 
   /* Header */
   .header {
-    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-    padding: 48px 48px 40px;
+    background: linear-gradient(135deg, #0f1117 0%, #1a1d2e 50%, #2d1b4e 100%);
+    padding: 56px 56px 44px;
     color: #fff;
   }
   .header h1 {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
     margin-bottom: 6px;
     letter-spacing: -0.5px;
   }
-  .header p {
+  .header .subtitle {
     font-size: 15px;
-    opacity: 0.9;
-    font-weight: 400;
+    color: #a29bfe;
+    font-weight: 500;
+    margin-bottom: 4px;
   }
   .header .meta {
-    margin-top: 16px;
+    margin-top: 18px;
     font-size: 13px;
-    opacity: 0.75;
+    color: #6a6a8a;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
   }
+  .header .meta span { display: flex; align-items: center; gap: 6px; }
+  .header .meta svg { width: 14px; height: 14px; opacity: 0.6; }
 
   /* Content */
-  .content { padding: 40px 48px 80px; }
+  .content { padding: 44px 56px 80px; }
 
+  /* Intro */
   .intro {
-    background: #f8f9fd;
+    background: linear-gradient(135deg, #f8f9fd 0%, #f0f1fa 100%);
     border-radius: 14px;
-    padding: 24px 28px;
-    margin-bottom: 40px;
+    padding: 28px 32px;
+    margin-bottom: 44px;
     border: 1px solid #e8ecf4;
   }
   .intro p {
     font-size: 14px;
     color: #4a4a6a;
-    line-height: 1.7;
+    line-height: 1.8;
+  }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: #0f1117;
+    border-radius: 14px;
+    padding: 32px;
+    margin-bottom: 44px;
+  }
+  .arch-diagram h3 {
+    color: #a29bfe;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .arch-grid {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .arch-grid .arch-box { flex: 1 1 0; min-width: 120px; }
+  .arch-grid .arch-arrow { flex: 0 0 auto; }
+  .arch-box {
+    padding: 14px 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .arch-box .arch-sub {
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .arch-meta { background: #1e3a5f; color: #74c0fc; }
+  .arch-n8n { background: #3d1f5c; color: #c4a8ff; }
+  .arch-ai { background: #5c1f3d; color: #ff9ec4; }
+  .arch-db { background: #1f5c3d; color: #6ee7b7; }
+  .arch-cw { background: #5c3d1f; color: #fcd34d; }
+
+  .arch-arrow {
+    text-align: center;
+    color: #4a4a6a;
+    font-size: 18px;
+  }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 44px;
+  }
+  .stat-card {
+    background: #f8f9fd;
+    border: 1px solid #e8ecf4;
+    border-radius: 12px;
+    padding: 22px 16px;
+    text-align: center;
+  }
+  .stat-number {
+    font-size: 26px;
+    font-weight: 800;
+    color: #6c5ce7;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #6a6a8a;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   /* Workflow section */
   .workflow-section {
-    margin-bottom: 48px;
+    margin-bottom: 56px;
+    page-break-inside: avoid;
   }
   .workflow-section:last-child { margin-bottom: 0; }
 
-  .workflow-title {
+  .workflow-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 14px;
+    margin-bottom: 6px;
   }
   .workflow-number {
-    background: #6c5ce7;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
     color: #fff;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     flex-shrink: 0;
   }
-  .workflow-title h2 {
-    font-size: 20px;
+  .workflow-header h2 {
+    font-size: 22px;
     font-weight: 700;
     color: #1a1a2e;
+  }
+  .workflow-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #999;
+    background: #f4f4f8;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-left: 8px;
   }
   .workflow-desc {
     font-size: 14px;
     color: #6a6a8a;
-    margin-bottom: 24px;
-    margin-left: 44px;
+    margin-bottom: 28px;
+    margin-left: 50px;
+    line-height: 1.7;
+  }
+
+  /* Config table */
+  .config-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 28px;
+    margin-left: 50px;
+    width: calc(100% - 50px);
+  }
+  .config-table th {
+    background: #f8f9fd;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6a6a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e8ecf4;
+  }
+  .config-table td {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #eef0f5;
+    color: #333;
+  }
+  .config-table td:first-child {
+    font-weight: 600;
+    color: #1a1a2e;
+    white-space: nowrap;
+  }
+  .config-table code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: #f4f4f8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #6c5ce7;
   }
 
   /* Flowchart */
   .flowchart {
-    margin-left: 44px;
+    margin-left: 50px;
     position: relative;
   }
 
-  .flow-row {
+  .vstack {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0;
-    margin-bottom: 0;
-    flex-wrap: wrap;
   }
 
   .node {
-    padding: 12px 20px;
+    padding: 14px 18px;
     border-radius: 10px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
-    min-width: 140px;
-    max-width: 220px;
+    min-width: 180px;
+    max-width: 260px;
     position: relative;
     line-height: 1.4;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .node .node-sub {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    overflow-wrap: break-word;
+    word-break: break-all;
+  }
+  .node .node-meta {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.6;
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   /* Node types */
   .node-trigger {
-    background: #6c5ce7;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
     color: #fff;
   }
   .node-action {
@@ -166,7 +319,7 @@
     color: #1a1a2e;
   }
   .node-ai {
-    background: #e8ecff;
+    background: linear-gradient(135deg, #e8ecff, #f0f3ff);
     border: 2px solid #6c5ce7;
     color: #5b4cdb;
   }
@@ -174,7 +327,6 @@
     background: #fff3cd;
     border: 2px solid #ffc107;
     color: #856404;
-    border-radius: 8px;
   }
   .node-alert {
     background: #fee;
@@ -191,11 +343,16 @@
     border: 2px solid #17a2b8;
     color: #0c5460;
   }
+  .node-db {
+    background: #e8f5e9;
+    border: 2px solid #4caf50;
+    color: #1b5e20;
+  }
 
   /* Arrows */
   .arrow-down {
     width: 2px;
-    height: 24px;
+    height: 28px;
     background: #b8bcc8;
     margin: 0 auto;
     position: relative;
@@ -213,62 +370,37 @@
     border-top: 7px solid #b8bcc8;
   }
 
-  .arrow-right {
-    width: 32px;
-    height: 2px;
-    background: #b8bcc8;
-    position: relative;
-    flex-shrink: 0;
-  }
-  .arrow-right::after {
-    content: '';
-    position: absolute;
-    right: -1px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 7px solid #b8bcc8;
-  }
-
   /* Branch container */
   .branch {
     display: flex;
-    gap: 40px;
+    gap: 24px;
     align-items: flex-start;
     margin-top: 0;
+    flex-wrap: wrap;
   }
   .branch-col {
     display: flex;
     flex-direction: column;
     align-items: center;
     flex: 1;
+    min-width: 180px;
   }
   .branch-label {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 700;
     color: #999;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  /* Vertical stack */
-  .vstack {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    letter-spacing: 1px;
   }
 
   /* Legend */
   .legend {
     display: flex;
-    gap: 20px;
+    gap: 18px;
     flex-wrap: wrap;
-    margin-bottom: 32px;
-    padding: 16px 20px;
+    margin-bottom: 36px;
+    padding: 16px 22px;
     background: #f8f9fd;
     border-radius: 10px;
     border: 1px solid #e8ecf4;
@@ -287,35 +419,73 @@
     flex-shrink: 0;
   }
 
-  /* Stats */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 40px;
-  }
-  .stat-card {
-    background: #f8f9fd;
-    border: 1px solid #e8ecf4;
+  /* Tech detail box */
+  .tech-detail {
+    background: #0f1117;
     border-radius: 12px;
-    padding: 20px;
-    text-align: center;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    margin-left: 50px;
+    width: calc(100% - 50px);
   }
-  .stat-number {
-    font-size: 28px;
-    font-weight: 800;
-    color: #6c5ce7;
-    margin-bottom: 4px;
-  }
-  .stat-label {
+  .tech-detail h4 {
+    color: #a29bfe;
     font-size: 12px;
-    color: #6a6a8a;
-    font-weight: 500;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tech-detail .code-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #e2e2e2;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tech-detail .code-block .hl { color: #6ee7b7; }
+  .tech-detail .code-block .hl2 { color: #74c0fc; }
+  .tech-detail .code-block .hl3 { color: #ff9ec4; }
+  .tech-detail .code-block .hl4 { color: #fcd34d; }
+
+  /* Data flow */
+  .data-flow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 24px;
+    margin-left: 50px;
+  }
+  .df-item {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .df-arrow {
+    color: #b8bcc8;
+    font-size: 14px;
+  }
+  .df-meta { background: #e3f2fd; color: #1565c0; }
+  .df-n8n { background: #f3e5f5; color: #7b1fa2; }
+  .df-ai { background: #fce4ec; color: #c62828; }
+  .df-db { background: #e8f5e9; color: #2e7d32; }
+  .df-cw { background: #fff3e0; color: #e65100; }
+  .df-email { background: #ffebee; color: #b71c1c; }
+
+  /* Section divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #e8ecf4, transparent);
+    margin: 48px 0;
   }
 
   /* Footer */
   .footer {
-    padding: 24px 48px;
+    padding: 28px 56px;
     border-top: 1px solid #e8ecf4;
     text-align: center;
     font-size: 12px;
@@ -324,15 +494,74 @@
 
   /* Print styles */
   @media print {
-    body { background: #fff; }
+    body { background: #fff; font-size: 11px; }
     .page { max-width: 100%; box-shadow: none; }
     .print-btn { display: none; }
-    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .node, .legend-dot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .content { padding: 24px 32px 40px; }
-    .workflow-section { page-break-inside: avoid; margin-bottom: 32px; }
+    .header, .arch-diagram, .tech-detail { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .node, .legend-dot, .df-item, .arch-box, .stat-card, .config-table th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .content { padding: 20px 20px 30px; }
+    .header { padding: 32px 28px 28px; }
+    .header h1 { font-size: 22px; }
+    .header .subtitle { font-size: 13px; }
+    .header .meta { font-size: 11px; gap: 16px; }
+
+    /* Allow sections to break across pages */
+    .workflow-section { page-break-inside: auto; margin-bottom: 28px; }
+    .workflow-header, .workflow-desc, .config-table, .data-flow { page-break-inside: avoid; }
+    .tech-detail { page-break-inside: avoid; }
     .flowchart { margin-left: 0; }
-    @page { margin: 12mm; }
+    .config-table, .tech-detail, .data-flow { margin-left: 0; width: 100%; }
+    .workflow-desc { margin-left: 0; }
+
+    /* Stack branches vertically in print to prevent overflow */
+    .branch { flex-direction: column !important; gap: 16px; align-items: center; }
+    .branch-col { width: 100% !important; max-width: 320px; }
+
+    /* Nested sub-branches also stack */
+    .branch .branch-col > div[style*="display: flex"] {
+      flex-direction: column !important;
+      gap: 16px !important;
+      align-items: center !important;
+    }
+
+    /* Architecture diagram: stack rows, smaller boxes */
+    .arch-diagram { padding: 20px; }
+    .arch-grid { gap: 6px; }
+    .arch-grid .arch-box { min-width: 100px; font-size: 10px; padding: 10px 8px; }
+    .arch-grid .arch-arrow { font-size: 14px; }
+
+    /* Nodes: smaller in print */
+    .node { min-width: 160px; max-width: 240px; font-size: 12px; padding: 10px 14px; }
+    .node .node-sub { font-size: 10px; }
+    .node .node-meta { font-size: 9px; }
+
+    /* Stats: 2x2 grid in print */
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 14px 10px; }
+    .stat-number { font-size: 20px; }
+
+    /* Config table: smaller text */
+    .config-table td { font-size: 11px; padding: 7px 10px; }
+    .config-table th { font-size: 10px; padding: 7px 10px; }
+    .config-table td:first-child { white-space: normal; }
+    .config-table code { font-size: 10px; }
+
+    /* Tech detail: smaller text */
+    .tech-detail { padding: 14px 16px; }
+    .tech-detail .code-block { font-size: 10px; line-height: 1.6; }
+
+    /* Data flow: wrap nicely */
+    .data-flow { gap: 4px; }
+    .df-item { font-size: 10px; padding: 4px 8px; }
+
+    /* Intro: less padding */
+    .intro { padding: 16px 20px; margin-bottom: 28px; }
+    .intro p { font-size: 12px; }
+
+    /* Divider: minimal */
+    .divider { margin: 28px 0; }
+
+    @page { margin: 8mm; size: A4; }
   }
 </style>
 </head>
@@ -342,9 +571,14 @@
 
   <!-- Header -->
   <div class="header">
-    <h1>Horizon Africa — AI Workflow Overview</h1>
-    <p>Automated WhatsApp Lead Qualification & Follow-Up System</p>
-    <div class="meta">Prepared for Horizon Africa Health &nbsp;|&nbsp; August 2026</div>
+    <div class="subtitle">Technical Architecture Document</div>
+    <h1>Horizon Africa — AI Workflow System</h1>
+    <div class="meta">
+      <span>Version 2.0</span>
+      <span>Last Updated: 05 August 2026</span>
+      <span>n8n Instance: n8n.horizonafrica.co.za</span>
+      <span>Status: Production — Active</span>
+    </div>
   </div>
 
   <div class="content">
@@ -352,187 +586,463 @@
     <!-- Intro -->
     <div class="intro">
       <p>
-        This document outlines the automated workflows powering Horizon Africa's WhatsApp customer engagement system.
-        Three workflows operate together to ensure every inbound message is handled intelligently, leads are qualified
-        automatically, and follow-ups are sent on time — all without manual intervention.
+        This document details the technical architecture of three production n8n workflows powering Horizon Africa's
+        WhatsApp Business automation stack. The system handles inbound message processing via Meta Cloud API webhook
+        ingestion, AI-driven lead qualification using an OpenRouter LLM endpoint, Supabase (PostgreSQL) for conversation
+        persistence and lead management, Chatwoot for human agent handover, and Brevo for transactional email alerts.
+        All workflows are deployed on a self-hosted n8n instance behind a Caddy reverse proxy with automatic TLS.
       </p>
+    </div>
+
+    <!-- System Architecture -->
+    <div class="arch-diagram">
+      <h3>System Architecture — Service Topology</h3>
+      <div class="arch-grid">
+        <div class="arch-box arch-meta">Meta Cloud API<div class="arch-sub">v21.0</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box arch-n8n">n8n Webhook<div class="arch-sub">POST /webhook/whatsapp-webhook</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box arch-ai">OpenRouter LLM<div class="arch-sub">openai/gpt-5.6-sol</div></div>
+      </div>
+      <div style="height: 12px;"></div>
+      <div class="arch-grid">
+        <div class="arch-box arch-db">Supabase PostgreSQL<div class="arch-sub">conversations, leads, products</div></div>
+        <div class="arch-arrow">↔</div>
+        <div class="arch-box arch-n8n">n8n Workflow Engine<div class="arch-sub">5 active workflows</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box arch-cw">Chatwoot<div class="arch-sub">WhatsApp inbox + agent handover</div></div>
+      </div>
+      <div style="height: 12px;"></div>
+      <div class="arch-grid">
+        <div class="arch-box arch-meta">Meta Cloud API<div class="arch-sub">template messages</div></div>
+        <div class="arch-arrow">←</div>
+        <div class="arch-box arch-n8n">n8n Scheduled Trigger<div class="arch-sub">cron: 0 9 * * *</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box" style="background:#3d1f1f;color:#ff9e9e;">Brevo SMTP<div class="arch-sub">email alerts</div></div>
+      </div>
     </div>
 
     <!-- Stats -->
     <div class="stats">
       <div class="stat-card">
         <div class="stat-number">3</div>
-        <div class="stat-label">Active Workflows</div>
+        <div class="stat-label">Production Workflows</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">24/7</div>
-        <div class="stat-label">AI Availability</div>
+        <div class="stat-number">22</div>
+        <div class="stat-label">Total Nodes</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number">9 AM</div>
-        <div class="stat-label">Daily Follow-Ups</div>
+        <div class="stat-number">5</div>
+        <div class="stat-label">Integrated Services</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">2</div>
+        <div class="stat-label">Webhook Endpoints</div>
       </div>
     </div>
 
     <!-- Legend -->
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#6c5ce7"></div> Trigger</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff;border:2px solid #dfe1ea"></div> Action</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#e8ecff;border:2px solid #6c5ce7"></div> AI Processing</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff3cd;border:2px solid #ffc107"></div> Decision</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fee;border:2px solid #e74c3c"></div> Alert</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#d4edda;border:2px solid #28a745"></div> Success</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#d1ecf1;border:2px solid #17a2b8"></div> Handover</div>
+      <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe)"></div> Trigger / Webhook</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fff;border:2px solid #dfe1ea"></div> Code / Action Node</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e8ecff;border:2px solid #6c5ce7"></div> AI / LLM Processing</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fff3cd;border:2px solid #ffc107"></div> Conditional Branch (IF)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fee;border:2px solid #e74c3c"></div> Email Alert (Brevo)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d4edda;border:2px solid #28a745"></div> WhatsApp Outbound</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d1ecf1;border:2px solid #17a2b8"></div> Chatwoot Handover</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e8f5e9;border:2px solid #4caf50"></div> Database I/O</div>
     </div>
 
-    <!-- Workflow 1: Inbound AI Lead Qualification -->
+    <!-- ============================================================ -->
+    <!-- WORKFLOW 1: Inbound AI Lead Qualification -->
+    <!-- ============================================================ -->
     <div class="workflow-section">
-      <div class="workflow-title">
+      <div class="workflow-header">
         <div class="workflow-number">1</div>
         <h2>Inbound AI Lead Qualification</h2>
+        <span class="workflow-id">kW4ELXolGnYx2AvB</span>
       </div>
       <p class="workflow-desc">
-        When a customer sends a WhatsApp message, the AI assistant "Layla" responds automatically —
-        answering questions about fibre and LTE packages, qualifying leads, and escalating to a human consultant when needed.
+        Primary inbound workflow. Receives Meta Cloud API webhook payloads on WhatsApp message events, extracts
+        message metadata, fetches conversation history and product catalog from Supabase, constructs a multi-turn
+        chat completion request to OpenRouter (GPT-5.6-sol), sends the AI-generated reply back via Meta Cloud API,
+        persists the conversation to Supabase, upserts lead records, and conditionally branches into hot-lead email
+        alerts and Chatwoot human-handover flows based on AI-returned flags.
       </p>
 
+      <!-- Config table -->
+      <table class="config-table">
+        <tr><th colspan="2">Workflow Configuration</th></tr>
+        <tr><td>Trigger Type</td><td>Webhook (POST) + Webhook (GET for Meta verification)</td></tr>
+        <tr><td>Webhook Path</td><td><code>/webhook/whatsapp-webhook</code></td></tr>
+        <tr><td>Response Mode</td><td><code>onReceived</code> (immediate ACK, async processing)</td></tr>
+        <tr><td>Execution Order</td><td><code>v1</code> (sequential)</td></tr>
+        <tr><td>Binary Mode</td><td><code>separate</code></td></tr>
+        <tr><td>AI Provider</td><td>OpenRouter — <code>openai/gpt-5.6-sol</code></td></tr>
+        <tr><td>AI Temperature</td><td><code>0.8</code></td></tr>
+        <tr><td>AI Endpoint</td><td><code>POST https://openrouter.ai/api/v1/chat/completions</code></td></tr>
+        <tr><td>Auth</td><td>Bearer token via <code>$env.OPENROUTER_API_KEY</code></td></tr>
+        <tr><td>Database</td><td>Supabase REST API — tables: <code>conversations</code>, <code>leads</code>, <code>products</code></td></tr>
+        <tr><td>Email Alerts</td><td>Brevo SMTP API — <code>POST https://api.brevo.com/v3/smtp/email</code></td></tr>
+        <tr><td>Handover</td><td>Chatwoot REST API — Account 1, Inbox 1 (WhatsApp Cloud)</td></tr>
+        <tr><td>Reply Channel</td><td>Meta Cloud API — <code>POST https://graph.facebook.com/v21.0/{phone_number_id}/messages</code></td></tr>
+      </table>
+
+      <!-- Data Flow -->
+      <div class="data-flow">
+        <span class="df-item df-meta">Meta Webhook</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-n8n">Extract Message</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-db">Supabase: conversations</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-db">Supabase: products</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-ai">OpenRouter LLM</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-meta">Meta: Send Reply</span>
+        <span class="df-arrow">+</span>
+        <span class="df-item df-db">Supabase: upsert lead</span>
+        <span class="df-arrow">+</span>
+        <span class="df-item df-email">Brevo: hot lead alert</span>
+        <span class="df-arrow">+</span>
+        <span class="df-item df-cw">Chatwoot: handover</span>
+      </div>
+
+      <!-- Flowchart -->
       <div class="flowchart">
+
         <!-- Trigger -->
         <div class="vstack">
-          <div class="node node-trigger">WhatsApp Message Received</div>
+          <div class="node node-trigger">WhatsApp Webhook<span class="node-sub">POST /webhook/whatsapp-webhook</span><span class="node-meta">Trigger 1 — Inbound Messages</span></div>
           <div class="arrow-down"></div>
         </div>
 
-        <!-- Extract + Forward -->
+        <!-- Extract Message -->
         <div class="vstack">
-          <div class="node node-action">Extract Message Details</div>
+          <div class="node node-action">Extract Message<span class="node-sub">Code node — parses Meta payload</span><span class="node-meta">Extracts: phoneNumber, messageText, messageId, contactName, metaTimestamp</span></div>
           <div class="arrow-down"></div>
         </div>
 
-        <!-- Fetch history -->
+        <!-- Fetch Conversation History -->
         <div class="vstack">
-          <div class="node node-action">Fetch Conversation History</div>
+          <div class="node node-db">Fetch Conversation History<span class="node-sub">GET /rest/v1/conversations?phone_number=eq.{phone}&order=timestamp.desc&limit=10</span><span class="node-meta">Supabase REST API — anon key auth</span></div>
           <div class="arrow-down"></div>
         </div>
 
-        <!-- AI -->
+        <!-- Ensure History Data -->
         <div class="vstack">
-          <div class="node node-ai">AI Generates Response<br><span style="font-size:11px;font-weight:400;opacity:0.8">Layla AI Assistant</span></div>
+          <div class="node node-action">Ensure History Data<span class="node-sub">Code node — handles empty result set</span><span class="node-meta">Injects placeholder if no prior conversations (new customer)</span></div>
           <div class="arrow-down"></div>
         </div>
 
-        <!-- Process + Log -->
+        <!-- Fetch Products -->
         <div class="vstack">
-          <div class="node node-action">Process Response &amp; Save to Database</div>
+          <div class="node node-db">Fetch Products<span class="node-sub">GET /rest/v1/products?is_active=eq.true&order=display_order.asc</span><span class="node-meta">Supabase — dynamic product catalog injection</span></div>
           <div class="arrow-down"></div>
         </div>
 
-        <!-- Three branches -->
+        <!-- Build OpenRouter Request -->
+        <div class="vstack">
+          <div class="node node-action">Build OpenRouter Request<span class="node-sub">Code node — constructs chat completions payload</span><span class="node-meta">System prompt (Layla persona + product catalog) + conversation history as role-tagged messages</span></div>
+          <div class="arrow-down"></div>
+        </div>
+
+        <!-- Call OpenRouter API -->
+        <div class="vstack">
+          <div class="node node-ai">Call OpenRouter API<span class="node-sub">POST https://openrouter.ai/api/v1/chat/completions</span><span class="node-meta">Model: openai/gpt-5.6-sol · Temp: 0.8 · Bearer auth</span></div>
+          <div class="arrow-down"></div>
+        </div>
+
+        <!-- Process Response -->
+        <div class="vstack">
+          <div class="node node-action">Process Response<span class="node-sub">Code node — parses choices[0].message.content</span><span class="node-meta">Extracts: replyText, leadScore, needsEscalation, recommendedPackage, contactName, email, address, followUpRequested</span></div>
+          <div class="arrow-down"></div>
+        </div>
+
+        <!-- Parallel: Prepare Log Data + Upsert Lead -->
         <div class="branch">
           <div class="branch-col">
-            <div class="branch-label">Reply to Customer</div>
-            <div class="node node-action">Validate Reply</div>
+            <div class="branch-label">Persist Conversation</div>
+            <div class="node node-action">Prepare Log Data<span class="node-sub">Code node — formats conversation record</span></div>
             <div class="arrow-down"></div>
-            <div class="node node-decision">Valid?</div>
-            <div class="arrow-down"></div>
-            <div class="node node-success">Send WhatsApp Reply</div>
+            <div class="node node-db">Log Conversation<span class="node-sub">POST /rest/v1/conversations</span><span class="node-meta">Supabase — inserts incoming_message + ai_response</span></div>
           </div>
 
           <div class="branch-col">
-            <div class="branch-label">Hot Lead Detection</div>
-            <div class="node node-decision">Is Hot Lead?</div>
+            <div class="branch-label">Update Lead Record</div>
+            <div class="node node-db">Upsert Lead<span class="node-sub">POST /rest/v1/leads (upsert on phone_number)</span><span class="node-meta">Supabase — updates lead_score, recommended_package, follow_up_requested, contact details</span></div>
+          </div>
+        </div>
+
+        <!-- After Log Conversation: 3 branches -->
+        <div style="text-align: center; margin: 20px 0 12px; font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 1px;">Post-Log Branching (from Log Conversation node)</div>
+
+        <div class="branch">
+          <!-- Branch 1: Reply -->
+          <div class="branch-col">
+            <div class="branch-label">Customer Reply</div>
+            <div class="node node-action">Prepare WhatsApp Data<span class="node-sub">Code node — formats Meta API payload</span></div>
             <div class="arrow-down"></div>
-            <div class="node node-alert">Send Hot Lead Alert<br><span style="font-size:11px;font-weight:400">Email notification</span></div>
+            <div class="node node-success">Send WhatsApp Reply<span class="node-sub">POST graph.facebook.com/v21.0/{phone_id}/messages</span><span class="node-meta">Meta Cloud API — type: text, to: {phoneNumber}</span></div>
           </div>
 
+          <!-- Branch 2: Hot Lead -->
+          <div class="branch-col">
+            <div class="branch-label">Hot Lead Alert</div>
+            <div class="node node-decision">Check Hot Lead<span class="node-sub">IF node — condition: leadScore ≥ threshold</span></div>
+            <div class="arrow-down"></div>
+            <div class="node node-action">Prepare Hot Lead Email<span class="node-sub">Code node — builds HTML email with lead details</span></div>
+            <div class="arrow-down"></div>
+            <div class="node node-alert">Send Hot Lead Alert<span class="node-sub">POST api.brevo.com/v3/smtp/email</span><span class="node-meta">Brevo — HTML email to sales team</span></div>
+          </div>
+
+          <!-- Branch 3: Escalation -->
           <div class="branch-col">
             <div class="branch-label">Human Handover</div>
-            <div class="node node-decision">Needs Escalation?</div>
+            <div class="node node-decision">Check Escalation<span class="node-sub">IF node — condition: needsEscalation == true</span></div>
             <div class="arrow-down"></div>
-            <div class="node node-handover">Create Contact in Chatwoot</div>
+            <div class="node node-action">Prepare Chatwoot Handover<span class="node-sub">Code node — extracts email, address, package from history</span><span class="node-meta">Builds summary: contactName, phoneNumber, leadScore, recommendedPackage, convo excerpt</span></div>
             <div class="arrow-down"></div>
-            <div class="node node-handover">Open Conversation &amp; Add Summary Note</div>
+
+            <!-- Sub-branches: email + chatwoot -->
+            <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center;">
+              <div class="branch-col">
+                <div class="node node-action">Prepare Escalation Email<span class="node-sub">Code node — HTML template with lead details + convo summary</span></div>
+                <div class="arrow-down"></div>
+                <div class="node node-alert">Send Escalation Alert<span class="node-sub">POST api.brevo.com/v3/smtp/email</span></div>
+              </div>
+              <div class="branch-col">
+                <div class="node node-handover">Create Chatwoot Contact<span class="node-sub">GET then POST /api/v1/accounts/1/contacts</span><span class="node-meta">Search by phone → create if not found</span></div>
+                <div class="arrow-down"></div>
+                <div class="node node-handover">Create Chatwoot Conversation<span class="node-sub">POST /api/v1/accounts/1/conversations</span><span class="node-meta">Inbox 1, status: open, assignee set</span></div>
+                <div class="arrow-down"></div>
+                <div class="node node-handover">Send Chatwoot Handover Message<span class="node-sub">POST /api/v1/accounts/1/conversations/{id}/messages</span><span class="node-meta">Private note with full lead context</span></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Tech Detail: AI Prompt Architecture -->
+      <div class="tech-detail">
+        <h4>AI System Prompt Architecture</h4>
+        <div class="code-block"><span class="hl">SYSTEM ROLE:</span> "Layla" — Horizon Africa AI assistant persona
+<span class="hl">PERSONALITY:</span> Warm, emotionally intelligent, curious, concise (max 3-4 sentences)
+<span class="hl">SCOPE:</span> Fibre packages only (product catalog injected dynamically from Supabase <span class="hl2">products</span> table)
+<span class="hl">QUALIFICATION FLOW:</span>
+  Step 1: Household size → Step 2: Usage patterns → Step 3: Package recommendation → Step 4: Lead details
+<span class="hl">OBJECTION HANDLING:</span> Price (compare to mobile data spend), Comparing providers (highlight value),
+  Availability (escalate to human), Trust (social proof), Timing (follow-up offer)
+<span class="hl">OUTPUT FORMAT:</span> JSON with fields:
+  { replyText, leadScore (1-10), needsEscalation (bool), recommendedPackage,
+    contactName, email, address, followUpRequested (bool) }
+<span class="hl">CONSTRAINTS:</span> Never break character · Max 1 emoji · No pushy sales · South African English
+<span class="hl">PRODUCT CATALOG:</span> Injected at runtime from <span class="hl2">SELECT * FROM products WHERE is_active = true ORDER BY display_order</span>
+<span class="hl">CONTEXT WINDOW:</span> Last 10 conversations per phone number (from <span class="hl2">conversations</span> table)</div>
+      </div>
+
+      <!-- Tech Detail: Webhook Verification -->
+      <div class="tech-detail">
+        <h4>Meta Webhook Verification Subflow</h4>
+        <div class="code-block"><span class="hl3">GET</span> /webhook/whatsapp-webhook?hub.mode=subscribe&hub.challenge={challenge}&hub.verify_token={token}
+  → <span class="hl4">Verify Token</span> node: compares <span class="hl2">hub.verify_token</span> against configured verify token
+  → <span class="hl4">Respond to Verification</span> node: returns <span class="hl2">hub.challenge</span> as plain text response
+  <span class="hl">Purpose:</span> Meta requires this handshake once during webhook registration. The GET trigger
+  on the same path handles this independently from the POST message handler.</div>
+      </div>
     </div>
 
-    <!-- Workflow 2: Follow-Up Reminders -->
+    <div class="divider"></div>
+
+    <!-- ============================================================ -->
+    <!-- WORKFLOW 2: Automated Follow-Up Reminders -->
+    <!-- ============================================================ -->
     <div class="workflow-section">
-      <div class="workflow-title">
+      <div class="workflow-header">
         <div class="workflow-number">2</div>
         <h2>Automated Follow-Up Reminders</h2>
+        <span class="workflow-id">LcbHz5JRjVfkPf1w</span>
       </div>
       <p class="workflow-desc">
-        Every morning at 9 AM, the system checks for leads that requested a follow-up and haven't been contacted yet.
-        It sends a personalised WhatsApp reminder to each one automatically.
+        Scheduled workflow running daily at 09:00 SAST. Queries Supabase <code>leads</code> table for records where
+        <code>follow_up_requested = true</code> AND <code>follow_up_sent = false</code> AND <code>follow_up_date ≤ today</code>.
+        Iterates over each lead, sends a WhatsApp template message (<code>horizon_followup_v1</code>) via Meta Cloud API
+        with personalised parameters (customer name, offered package), then PATCHes the lead record to mark as sent.
       </p>
+
+      <table class="config-table">
+        <tr><th colspan="2">Workflow Configuration</th></tr>
+        <tr><td>Trigger Type</td><td>Schedule Trigger (cron)</td></tr>
+        <tr><td>Cron Expression</td><td><code>0 9 * * *</code> (daily at 09:00)</td></tr>
+        <tr><td>Database Query</td><td><code>GET /rest/v1/leads?follow_up_requested=eq.true&follow_up_sent=eq.false&follow_up_date=lte.{today}</code></td></tr>
+        <tr><td>Message Type</td><td>WhatsApp Template (<code>horizon_followup_v1</code>)</td></tr>
+        <tr><td>Template Parameters</td><td><code>{{1}}</code> = full_name, <code>{{2}}</code> = offered_package</td></tr>
+        <tr><td>Template Language</td><td><code>en</code> (English)</td></tr>
+        <tr><td>Post-Send Action</td><td><code>PATCH /rest/v1/leads?id=eq.{leadId}</code> — sets <code>follow_up_sent=true</code>, <code>follow_up_sent_at=now()</code></td></tr>
+        <tr><td>Meta API</td><td><code>POST https://graph.facebook.com/v21.0/1257101724147822/messages</code></td></tr>
+      </table>
+
+      <div class="data-flow">
+        <span class="df-item df-n8n">Cron: 0 9 * * *</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-db">Supabase: leads (SELECT)</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-n8n">Split into items</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-meta">Meta: template message</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-db">Supabase: leads (PATCH)</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-n8n">Log summary</span>
+      </div>
 
       <div class="flowchart">
         <div class="vstack">
-          <div class="node node-trigger">Daily Schedule — 9:00 AM</div>
+          <div class="node node-trigger">Daily 9AM Trigger<span class="node-sub">Schedule Trigger — cron: 0 9 * * *</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-action">Query Pending Follow-Ups<br><span style="font-size:11px;font-weight:400;opacity:0.7">from lead database</span></div>
+          <div class="node node-db">Query Pending Follow-Ups<span class="node-sub">GET /rest/v1/leads?follow_up_requested=eq.true&follow_up_sent=eq.false&follow_up_date=lte.{today}</span><span class="node-meta">Supabase REST API — selects: id, phone_number, full_name, offered_package, follow_up_date</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-action">Split Into Individual Leads</div>
+          <div class="node node-action">Split Leads<span class="node-sub">Code node — maps array → individual items</span><span class="node-meta">Returns [] if no pending leads (workflow exits gracefully)</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-success">Send WhatsApp Reminder<br><span style="font-size:11px;font-weight:400;opacity:0.8">Personalised template message</span></div>
+          <div class="node node-success">Send WhatsApp Reminder<span class="node-sub">POST graph.facebook.com/v21.0/{phone_id}/messages</span><span class="node-meta">Template: horizon_followup_v1 · Params: {{1}}=fullName, {{2}}=offeredPackage</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-action">Mark Lead as Contacted</div>
+          <div class="node node-db">Mark Lead as Sent<span class="node-sub">PATCH /rest/v1/leads?id=eq.{leadId}</span><span class="node-meta">Sets: follow_up_sent=true, follow_up_sent_at=ISO timestamp, updated_at=ISO timestamp</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-action">Log Summary</div>
+          <div class="node node-action">Log Summary<span class="node-sub">Code node — aggregates execution results</span><span class="node-meta">Returns: { sentCount, timestamp, status: "completed" }</span></div>
         </div>
+      </div>
+
+      <div class="tech-detail">
+        <h4>WhatsApp Template Specification</h4>
+        <div class="code-block"><span class="hl">Template Name:</span> horizon_followup_v1
+<span class="hl">Language:</span> en (English)
+<span class="hl">Body:</span> "Hi <span class="hl2">{{1}}</span>, we saved the <span class="hl2">{{2}}</span> package we discussed.
+  Still thinking it over? Just reply here and we will pick up where we left off. — Horizon Africa"
+<span class="hl">Parameters:</span>
+  <span class="hl2">{{1}}</span> → lead.full_name (fallback: "there")
+  <span class="hl2">{{2}}</span> → lead.offered_package (fallback: "fibre")
+<span class="hl">Status:</span> Requires Meta WABA template approval before first send
+<span class="hl">API Version:</span> v21.0
+<span class="hl">Phone Number ID:</span> 1257101724147822</div>
       </div>
     </div>
 
-    <!-- Workflow 3: Error Monitoring -->
+    <div class="divider"></div>
+
+    <!-- ============================================================ -->
+    <!-- WORKFLOW 3: Error Monitoring -->
+    <!-- ============================================================ -->
     <div class="workflow-section">
-      <div class="workflow-title">
+      <div class="workflow-header">
         <div class="workflow-number">3</div>
-        <h2>Error Monitoring &amp; Alerts</h2>
+        <h2>Error Monitoring & Alert Pipeline</h2>
+        <span class="workflow-id">4sKjZjAY91UzCmqe</span>
       </div>
       <p class="workflow-desc">
-        If any workflow encounters an error, an automatic email alert is sent to the team with full details —
-        ensuring issues are caught and resolved quickly.
+        Global error handler attached to the n8n instance. Fires automatically when any workflow execution encounters
+        an unhandled error. Extracts error metadata (workflow name, execution ID, failed node name, error message,
+        stack trace), constructs an HTML email report, and sends via Brevo SMTP API to multiple recipients.
       </p>
+
+      <table class="config-table">
+        <tr><th colspan="2">Workflow Configuration</th></tr>
+        <tr><td>Trigger Type</td><td>Error Trigger (n8n built-in <code>errorTrigger</code> node)</td></tr>
+        <tr><td>Scope</td><td>Global — fires on ANY workflow error across the n8n instance</td></tr>
+        <tr><td>Email Provider</td><td>Brevo — <code>POST https://api.brevo.com/v3/smtp/email</code></td></tr>
+        <tr><td>Recipients</td><td>mohamed@owdsolutions.co.za, keshlan@horizonafrica.co.za</td></tr>
+        <tr><td>Sender</td><td>Horizon Africa AI &lt;keshlan@horizonafrica.co.za&gt;</td></tr>
+        <tr><td>Email Format</td><td>HTML — includes workflow name, execution ID, failed node, error message, stack trace (truncated to 2000 chars), timestamp, and direct links to n8n execution view</td></tr>
+      </table>
+
+      <div class="data-flow">
+        <span class="df-item df-n8n">Error Trigger</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-n8n">Build HTML Report</span>
+        <span class="df-arrow">→</span>
+        <span class="df-item df-email">Brevo: Send Alert</span>
+      </div>
 
       <div class="flowchart">
         <div class="vstack">
-          <div class="node node-trigger">Error Detected</div>
+          <div class="node node-trigger">Error Trigger<span class="node-sub">n8n errorTrigger — global scope</span><span class="node-meta">Fires on any workflow execution failure</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-action">Build Error Report</div>
+          <div class="node node-action">Build Alert Email<span class="node-sub">Code node — constructs HTML email template</span><span class="node-meta">Extracts: workflow.name, workflow.id, execution.id, execution.error.message, execution.lastNodeExecuted, execution.error.stack (truncated 2000 chars)</span></div>
           <div class="arrow-down"></div>
         </div>
 
         <div class="vstack">
-          <div class="node node-alert">Send Email Alert<br><span style="font-size:11px;font-weight:400">with error details &amp; stack trace</span></div>
+          <div class="node node-alert">Send Alert Email<span class="node-sub">POST api.brevo.com/v3/smtp/email</span><span class="node-meta">HTML email → 2 recipients · Subject: "⚠️ Layla Error Alert: {workflow} - {node}"</span></div>
         </div>
       </div>
+
+      <div class="tech-detail">
+        <h4>Error Payload Schema</h4>
+        <div class="code-block"><span class="hl">Error Trigger Output:</span> {
+  <span class="hl2">workflow</span>: { name, id },
+  <span class="hl2">execution</span>: {
+    id,
+    <span class="hl3">error</span>: { message, stack },
+    <span class="hl3">lastNodeExecuted</span>
+  }
+}
+<span class="hl">Email Subject Pattern:</span> "⚠️ Layla Error Alert: {workflowName} - {failedNode}"
+<span class="hl">Email Contains:</span>
+  - Workflow name + ID
+  - Execution ID (with direct link to n8n execution view)
+  - Failed node name (highlighted in red)
+  - Full error message
+  - Stack trace (max 2000 chars, pre-formatted)
+  - ISO 8601 timestamp
+  - Action items: open workflow, review execution, fix &amp; re-publish</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Infrastructure Summary -->
+    <div class="workflow-section">
+      <div class="workflow-header">
+        <div class="workflow-number" style="background:linear-gradient(135deg,#0f1117,#2d1b4e);font-size:14px;">⚙</div>
+        <h2>Infrastructure & Integration Summary</h2>
+      </div>
+
+      <table class="config-table" style="margin-left:0;width:100%;">
+        <tr><th>Service</th><th>Role</th><th>Endpoint / Location</th></tr>
+        <tr><td>n8n (self-hosted)</td><td>Workflow orchestration engine</td><td><code>https://n8n.horizonafrica.co.za</code> — Docker container behind Caddy reverse proxy</td></tr>
+        <tr><td>Meta Cloud API</td><td>WhatsApp Business messaging</td><td><code>https://graph.facebook.com/v21.0/</code> — Phone Number ID: 1257101724147822</td></tr>
+        <tr><td>OpenRouter</td><td>LLM inference (AI assistant)</td><td><code>https://openrouter.ai/api/v1/chat/completions</code> — Model: openai/gpt-5.6-sol</td></tr>
+        <tr><td>Supabase (PostgreSQL)</td><td>Conversation & lead persistence, product catalog</td><td><code>https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/</code> — Tables: conversations, leads, products</td></tr>
+        <tr><td>Chatwoot</td><td>Human agent handover & WhatsApp inbox</td><td><code>https://chat.horizonafrica.co.za</code> — Account 1, Inbox 1 (WhatsApp Cloud channel)</td></tr>
+        <tr><td>Brevo</td><td>Transactional email (alerts)</td><td><code>https://api.brevo.com/v3/smtp/email</code> — Hot lead + escalation + error alerts</td></tr>
+        <tr><td>Caddy</td><td>Reverse proxy & automatic TLS</td><td>Let's Encrypt certificates — terminates TLS for all subdomains</td></tr>
+      </table>
     </div>
 
   </div>
 
   <!-- Footer -->
   <div class="footer">
-    Horizon Africa &nbsp;&copy;&nbsp; 2026 &nbsp;|&nbsp; AI Workflow Overview &nbsp;|&nbsp; Confidential
+    Horizon Africa &nbsp;&copy;&nbsp; 2026 &nbsp;|&nbsp; Technical Workflow Architecture &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; v2.0 — 05 Aug 2026
   </div>
 
 </div>
