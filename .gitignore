@@ -17,3 +17,13 @@ tsconfig.tsbuildinfo
 
 # env files for backend
 backend/.env
+
+# secrets — never commit raw env/secret notes
+horizon env.txt
+*-env.txt
+*.env.bak
+*.bak
+
+# n8n workflow backup copies (the canonical workflow JSON is tracked)
+*-backup-*.json
+workflow-inbound-ai-v2-backup-*.json
