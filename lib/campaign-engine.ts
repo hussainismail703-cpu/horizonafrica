@@ -102,9 +102,16 @@ export async function processCampaigns(): Promise<CampaignProcessingResult> {
       result.enrolments_advanced += sub.enrolments_advanced;
       result.errors.push(...sub.errors);
     } catch (err) {
+      const errMsg =
+        err instanceof Error ? err.message : String(err);
       result.errors.push(
-        `Campaign ${campaign.id} (${campaign.name}) threw: ${err instanceof Error ? err.message : String(err)}`
+        `Campaign ${campaign.id} (${campaign.name}) threw: ${errMsg}`
       );
+      await logCampaignError({
+        campaignId: campaign.id,
+        errorType: "campaign_processing_exception",
+        errorMessage: errMsg,
+      });
     }
   }
 
@@ -135,6 +142,11 @@ export async function processCampaign(
 
   if (stepsErr) {
     result.errors.push(`Failed to load steps: ${stepsErr.message}`);
+    await logCampaignError({
+      campaignId,
+      errorType: "load_steps_failed",
+      errorMessage: stepsErr.message,
+    });
     return result;
   }
 
@@ -152,6 +164,11 @@ export async function processCampaign(
 
   if (enrolErr) {
     result.errors.push(`Failed to load enrolments: ${enrolErr.message}`);
+    await logCampaignError({
+      campaignId,
+      errorType: "load_enrolments_failed",
+      errorMessage: enrolErr.message,
+    });
     return result;
   }
 
@@ -280,6 +297,15 @@ export async function sendCampaignMessage(
         templateName,
         deliveryStatus: "failed",
         metaMessageId: null,
+        metaError: errMsg,
+      });
+      await logCampaignError({
+        campaignId,
+        enrolId,
+        phoneNumber: phone,
+        errorType: "send_failed",
+        errorMessage: errMsg,
+        context: { template: templateName, step: stepNumber, status: res.status },
       });
       return { success: false, error: errMsg };
     }
@@ -298,6 +324,7 @@ export async function sendCampaignMessage(
 
     return { success: true, metaMessageId };
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "Network error";
     await recordInteraction({
       campaignId,
       enrolId,
@@ -307,10 +334,19 @@ export async function sendCampaignMessage(
       templateName,
       deliveryStatus: "failed",
       metaMessageId: null,
+      metaError: errMsg,
+    });
+    await logCampaignError({
+      campaignId,
+      enrolId,
+      phoneNumber: phone,
+      errorType: "send_exception",
+      errorMessage: errMsg,
+      context: { template: templateName, step: stepNumber },
     });
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Network error",
+      error: errMsg,
     };
   }
 }
@@ -328,6 +364,7 @@ export async function recordInteraction(args: {
   messageBody?: string | null;
   deliveryStatus: "pending" | "sent" | "delivered" | "read" | "failed";
   metaMessageId?: string | null;
+  metaError?: string | null;
 }): Promise<void> {
   const supabase = await createClient();
   await supabase.from("campaign_interactions").insert({
@@ -340,6 +377,29 @@ export async function recordInteraction(args: {
     message_body: args.messageBody ?? null,
     delivery_status: args.deliveryStatus,
     meta_message_id: args.metaMessageId ?? null,
+    meta_error: args.metaError ?? null,
+  });
+}
+
+/**
+ * Log a structured error to the campaign_errors table.
+ */
+export async function logCampaignError(args: {
+  campaignId: string;
+  enrolId?: string | null;
+  phoneNumber?: string | null;
+  errorType: string;
+  errorMessage?: string | null;
+  context?: Record<string, unknown> | null;
+}): Promise<void> {
+  const supabase = await createClient();
+  await supabase.from("campaign_errors").insert({
+    campaign_id: args.campaignId,
+    enrol_id: args.enrolId ?? null,
+    phone_number: args.phoneNumber ?? null,
+    error_type: args.errorType,
+    error_message: args.errorMessage ?? null,
+    context: args.context ?? {},
   });
 }
 

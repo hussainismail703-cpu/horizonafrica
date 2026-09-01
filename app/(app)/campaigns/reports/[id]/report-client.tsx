@@ -264,6 +264,112 @@ export function CampaignReportClient({ stats }: Props) {
           </div>
         )}
       </div>
+
+      {/* Failed messages */}
+      <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-on-surface">Failed Messages</h2>
+          <span className="text-xs text-on-surface-variant">
+            {stats.failedInteractions.length} failure
+            {stats.failedInteractions.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        {stats.failedInteractions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-on-surface-variant">
+            No failed messages. All sends delivered successfully.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-surface-variant text-xs uppercase tracking-wider text-on-surface-variant">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Phone</th>
+                  <th className="px-4 py-3 font-semibold">Step</th>
+                  <th className="px-4 py-3 font-semibold">Template</th>
+                  <th className="px-4 py-3 font-semibold">Error</th>
+                  <th className="px-4 py-3 font-semibold">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-variant/50">
+                {stats.failedInteractions.map((f) => (
+                  <tr key={f.id} className="transition-colors hover:bg-surface-container-low">
+                    <td className="px-4 py-3 font-medium text-on-surface">
+                      {f.phone_number}
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {f.step_number ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {f.template_name ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-error">
+                      {f.meta_error ?? "Unknown error"}
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {new Date(f.occurred_at).toLocaleString("en-ZA", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Engine errors */}
+      <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-on-surface">Engine Error Log</h2>
+          <span className="text-xs text-on-surface-variant">
+            {stats.recentErrors.length} recent error
+            {stats.recentErrors.length === 1 ? "" : "s"}
+          </span>
+        </div>
+        {stats.recentErrors.length === 0 ? (
+          <p className="py-8 text-center text-sm text-on-surface-variant">
+            No engine errors recorded for this campaign.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-surface-variant text-xs uppercase tracking-wider text-on-surface-variant">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Type</th>
+                  <th className="px-4 py-3 font-semibold">Phone</th>
+                  <th className="px-4 py-3 font-semibold">Message</th>
+                  <th className="px-4 py-3 font-semibold">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-variant/50">
+                {stats.recentErrors.map((e) => (
+                  <tr key={e.id} className="transition-colors hover:bg-surface-container-low">
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-error-container/30 px-2 py-0.5 text-xs font-semibold text-error">
+                        {e.error_type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {e.phone_number ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-on-surface-variant">
+                      {e.error_message ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {new Date(e.created_at).toLocaleString("en-ZA", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

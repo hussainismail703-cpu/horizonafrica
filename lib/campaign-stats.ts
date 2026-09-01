@@ -42,6 +42,22 @@ export interface CampaignStats {
   respondedEnrolled: number;
   removedEnrolled: number;
   failedMessages: number;
+  failedInteractions: {
+    id: string;
+    phone_number: string;
+    step_number: number | null;
+    template_name: string | null;
+    meta_error: string | null;
+    occurred_at: string;
+  }[];
+  recentErrors: {
+    id: string;
+    error_type: string;
+    error_message: string | null;
+    phone_number: string | null;
+    context: Record<string, unknown> | null;
+    created_at: string;
+  }[];
   stepBreakdown: {
     step: number;
     sent: number;
@@ -196,7 +212,7 @@ export async function getCampaignStats(
 
   if (error || !campaign) return null;
 
-  const [enrolmentsRes, interactionsRes, classificationsRes, recentRes] =
+  const [enrolmentsRes, interactionsRes, classificationsRes, recentRes, errorsRes] =
     await Promise.all([
       supabase
         .from("campaign_enrolments")
@@ -204,7 +220,7 @@ export async function getCampaignStats(
         .eq("campaign_id", campaignId),
       supabase
         .from("campaign_interactions")
-        .select("id, phone_number, step_number, message_type, template_name, delivery_status, occurred_at")
+        .select("id, phone_number, step_number, message_type, template_name, delivery_status, meta_error, occurred_at")
         .eq("campaign_id", campaignId)
         .order("occurred_at", { ascending: true }),
       supabase
@@ -217,12 +233,19 @@ export async function getCampaignStats(
         .eq("campaign_id", campaignId)
         .order("occurred_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("campaign_errors")
+        .select("id, error_type, error_message, phone_number, context, created_at")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
   const enrolments = enrolmentsRes.data ?? [];
   const interactions = interactionsRes.data ?? [];
   const classifications = classificationsRes.data ?? [];
   const recentInteractions = recentRes.data ?? [];
+  const recentErrors = errorsRes.data ?? [];
 
   const outbound = interactions.filter((i) => i.message_type === "outbound");
   const inbound = interactions.filter((i) => i.message_type === "inbound");
@@ -285,6 +308,19 @@ export async function getCampaignStats(
     }
   }
 
+  // Failed interactions (with error detail)
+  const failedInteractions = interactions
+    .filter((i) => i.message_type === "outbound" && i.delivery_status === "failed")
+    .map((i) => ({
+      id: i.id,
+      phone_number: i.phone_number,
+      step_number: i.step_number,
+      template_name: i.template_name,
+      meta_error: i.meta_error,
+      occurred_at: i.occurred_at,
+    }))
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+
   return {
     campaignId: campaign.id,
     campaignName: campaign.name,
@@ -302,6 +338,8 @@ export async function getCampaignStats(
     respondedEnrolled: statusCounts.responded,
     removedEnrolled: statusCounts.removed,
     failedMessages: failed,
+    failedInteractions,
+    recentErrors,
     stepBreakdown,
     recentInteractions,
   };

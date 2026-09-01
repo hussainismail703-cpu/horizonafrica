@@ -169,6 +169,7 @@ export interface CampaignInteraction {
   message_body: string | null;
   delivery_status: DeliveryStatus;
   meta_message_id: string | null;
+  meta_error: string | null;
   occurred_at: string;
   created_at: string;
 }
@@ -196,4 +197,15 @@ export interface CampaignAuditLog {
   new_value: string | null;
   changed_by: string;
   changed_at: string;
+}
+
+export interface CampaignError {
+  id: string;
+  campaign_id: string | null;
+  enrol_id: string | null;
+  phone_number: string | null;
+  error_type: string;
+  error_message: string | null;
+  context: Record<string, unknown> | null;
+  created_at: string;
 }
