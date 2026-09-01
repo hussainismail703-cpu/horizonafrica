@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Campaign, CampaignStatus } from "@/lib/types";
 import Link from "next/link";
-import { Plus, Megaphone } from "lucide-react";
+import { Plus, Megaphone, BarChart3 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -40,13 +40,22 @@ export default async function CampaignsPage() {
             Create and manage WhatsApp campaign sequences
           </p>
         </div>
-        <Link
-          href="/campaigns/create"
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" />
-          Create Campaign
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/campaigns/dashboard"
+            className="flex items-center gap-2 rounded-lg bg-surface-container-high px-4 py-2.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Dashboard
+          </Link>
+          <Link
+            href="/campaigns/create"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:brightness-110"
+          >
+            <Plus className="h-4 w-4" />
+            Create Campaign
+          </Link>
+        </div>
       </div>
 
       {campaigns.length === 0 ? (
