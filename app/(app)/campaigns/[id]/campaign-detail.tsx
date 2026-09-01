@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Users,
   ScrollText,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -229,6 +230,13 @@ export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) 
           Back to Campaigns
         </Link>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/campaigns/reports/${campaign.id}`}
+            className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Report
+          </Link>
           <Link
             href={`/campaigns/${campaign.id}/enrolments`}
             className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
