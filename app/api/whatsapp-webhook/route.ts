@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { detectAndMarkCampaignResponse, extractInboundMessage } from "@/lib/campaign-detection";
 
 const VERIFY_TOKEN = "horizon_africa_verify_2026";
 const N8N_WEBHOOK_URL = "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook";
@@ -40,6 +41,20 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const contentType = request.headers.get("content-type") || "application/json";
+
+    // Campaign enrolment detection: if this is an inbound message from a
+    // customer enrolled in an active campaign, mark them as 'responded' and
+    // record the inbound interaction. This stops further campaign messages.
+    // The message is still forwarded to n8n for the normal sales flow.
+    try {
+      const parsed = JSON.parse(body);
+      const inbound = extractInboundMessage(parsed);
+      if (inbound) {
+        await detectAndMarkCampaignResponse(inbound.phoneNumber, inbound.messageBody);
+      }
+    } catch {
+      // Not JSON or not an inbound message — continue with normal forwarding
+    }
 
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
