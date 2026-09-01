@@ -13,6 +13,8 @@ import {
   Pause,
   Square,
   ArrowLeft,
+  Users,
+  ScrollText,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -226,11 +228,27 @@ export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) 
           <ArrowLeft className="h-4 w-4" />
           Back to Campaigns
         </Link>
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[status]}`}
-        >
-          {status}
-        </span>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/campaigns/${campaign.id}/enrolments`}
+            className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Enrolments
+          </Link>
+          <Link
+            href={`/campaigns/${campaign.id}/audit`}
+            className="flex items-center gap-1.5 rounded-lg bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-highest"
+          >
+            <ScrollText className="h-3.5 w-3.5" />
+            Audit Trail
+          </Link>
+          <span
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[status]}`}
+          >
+            {status}
+          </span>
+        </div>
       </div>
 
       {/* Metadata */}
