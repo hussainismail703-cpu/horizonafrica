@@ -119,7 +119,39 @@ export default async function CustomerJourneyPage({
             <p className="text-xs uppercase tracking-wider text-on-surface-variant">Lead Status</p>
             <p className="font-medium text-on-surface">{lead?.status ?? "—"}</p>
           </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Last Campaign Contact</p>
+            <p className="font-medium text-on-surface">
+              {lead?.last_campaign_contact_date
+                ? formatDateTime(lead.last_campaign_contact_date)
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Last Campaign Response</p>
+            <p className="font-medium text-on-surface">
+              {lead?.last_campaign_response ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Rejection Reason</p>
+            <p className="font-medium capitalize text-on-surface">
+              {lead?.rejection_reason ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Nurture Flag</p>
+            <p className="font-medium text-on-surface">
+              {enrolment.nurture_flag ? "Yes" : "No"}
+            </p>
+          </div>
         </div>
+        {lead?.notes && (
+          <div className="mt-4 border-t border-surface-variant pt-4">
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Notes</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-on-surface">{lead.notes}</p>
+          </div>
+        )}
       </div>
 
       {/* Campaign Info */}

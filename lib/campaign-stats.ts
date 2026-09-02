@@ -32,6 +32,8 @@ export interface CampaignStats {
   messagesSent: number;
   deliveredCount: number;
   deliveryRate: number | null; // 0-100, null when no outbound messages
+  readCount: number;
+  readRate: number | null; // 0-100, null when no delivered messages
   responses: number;
   responseRate: number | null; // 0-100, null when no outbound messages
   enteredSalesFlow: number;
@@ -252,6 +254,7 @@ export async function getCampaignStats(
   const delivered = outbound.filter(
     (i) => i.delivery_status === "delivered" || i.delivery_status === "read"
   ).length;
+  const readCount = outbound.filter((i) => i.delivery_status === "read").length;
   const failed = outbound.filter((i) => i.delivery_status === "failed").length;
 
   // Entered sales flow = classification interested OR needs_information
@@ -328,6 +331,8 @@ export async function getCampaignStats(
     messagesSent: outbound.length,
     deliveredCount: delivered,
     deliveryRate: pct(delivered, outbound.length),
+    readCount,
+    readRate: pct(readCount, delivered),
     responses: inbound.length,
     responseRate: pct(inbound.length, outbound.length),
     enteredSalesFlow: salesFlowPhones.size,

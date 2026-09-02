@@ -322,6 +322,20 @@ export async function sendCampaignMessage(
       metaMessageId,
     });
 
+    // Update lead's last_campaign_contact_date
+    const { data: enrolment } = await supabase
+      .from("campaign_enrolments")
+      .select("lead_id")
+      .eq("id", enrolId)
+      .single();
+
+    if (enrolment?.lead_id) {
+      await supabase
+        .from("leads")
+        .update({ last_campaign_contact_date: new Date().toISOString() })
+        .eq("id", enrolment.lead_id);
+    }
+
     return { success: true, metaMessageId };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Network error";
@@ -405,6 +419,8 @@ export async function logCampaignError(args: {
 
 /**
  * Advance the enrolment to the next step, or mark completed if past the last step.
+ * When an enrolment reaches completed without ever responding (status was still
+ * 'active'), set nurture_flag = true so they can be flagged for nurture campaigns.
  */
 export async function advanceEnrolment(
   enrolId: string,
@@ -413,7 +429,7 @@ export async function advanceEnrolment(
   const supabase = await createClient();
   const { data: enrol } = await supabase
     .from("campaign_enrolments")
-    .select("current_step")
+    .select("current_step, status")
     .eq("id", enrolId)
     .single();
 
@@ -421,9 +437,15 @@ export async function advanceEnrolment(
 
   const nextStep = enrol.current_step + 1;
   if (nextStep >= totalSteps) {
+    // If the enrolment was still 'active' (never responded), flag for nurture
+    const nurtureFlag = enrol.status === "active";
     await supabase
       .from("campaign_enrolments")
-      .update({ current_step: nextStep, status: "completed" })
+      .update({
+        current_step: nextStep,
+        status: "completed",
+        nurture_flag: nurtureFlag,
+      })
       .eq("id", enrolId);
   } else {
     await supabase

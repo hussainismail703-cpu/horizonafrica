@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { Campaign, CampaignEnrolment, CampaignClassification, Lead } from "@/lib/types";
+import { Campaign, CampaignEnrolment, CampaignClassification, Lead, BroadcastGroup } from "@/lib/types";
 import { EnrolmentsManager } from "./enrolments-manager";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function EnrolmentsPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [campRes, enrolRes, classRes] = await Promise.all([
+  const [campRes, enrolRes, classRes, groupsRes] = await Promise.all([
     supabase.from("campaigns").select("*").eq("id", id).single(),
     supabase
       .from("campaign_enrolments")
@@ -24,6 +24,10 @@ export default async function EnrolmentsPage({
       .from("campaign_classifications")
       .select("*")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("broadcast_groups")
+      .select("*")
+      .order("group_label", { ascending: true }),
   ]);
 
   if (campRes.error || !campRes.data) {
@@ -35,6 +39,7 @@ export default async function EnrolmentsPage({
     lead: Lead | null;
   })[];
   const classifications = (classRes.data ?? []) as CampaignClassification[];
+  const groups = (groupsRes.data ?? []) as BroadcastGroup[];
 
   // Map latest classification per phone
   const classByPhone: Record<string, CampaignClassification> = {};
@@ -49,6 +54,7 @@ export default async function EnrolmentsPage({
       campaign={campaign}
       enrolments={enrolments}
       classificationsByPhone={classByPhone}
+      groups={groups}
     />
   );
 }

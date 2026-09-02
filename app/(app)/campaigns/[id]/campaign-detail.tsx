@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Campaign, CampaignStep, CampaignStatus } from "@/lib/types";
+import { Campaign, CampaignStep, CampaignStatus, BroadcastGroup } from "@/lib/types";
 import {
   Loader2,
   Plus,
@@ -22,6 +22,7 @@ import Link from "next/link";
 interface CampaignDetailProps {
   campaign: Campaign;
   initialSteps: CampaignStep[];
+  groups: BroadcastGroup[];
 }
 
 interface Template {
@@ -53,7 +54,7 @@ interface StepRow {
   template_name: string;
 }
 
-export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) {
+export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetailProps) {
   const router = useRouter();
   const [name, setName] = useState(campaign.name);
   const [objective, setObjective] = useState(campaign.objective ?? "");
@@ -62,6 +63,9 @@ export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) 
   );
   const [endDate, setEndDate] = useState(
     campaign.end_date ? campaign.end_date.slice(0, 10) : ""
+  );
+  const [groupId, setGroupId] = useState<string>(
+    campaign.group_id != null ? campaign.group_id.toString() : ""
   );
   const [status, setStatus] = useState<CampaignStatus>(campaign.status);
   const [steps, setSteps] = useState<StepRow[]>(
@@ -135,6 +139,7 @@ export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) 
           objective: objective.trim() || null,
           start_date: startDate ? new Date(startDate).toISOString() : null,
           end_date: endDate ? new Date(endDate).toISOString() : null,
+          group_id: groupId || null,
         }),
       });
       if (!res.ok) {
@@ -307,6 +312,23 @@ export function CampaignDetail({ campaign, initialSteps }: CampaignDetailProps) 
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
             />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+              Group
+            </label>
+            <select
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
+            >
+              <option value="">No group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.group_label} ({g.group_name})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="mt-5 flex justify-end">

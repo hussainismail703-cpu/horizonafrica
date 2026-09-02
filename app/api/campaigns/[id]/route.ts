@@ -22,6 +22,7 @@ export async function PATCH(
     start_date?: string | null;
     end_date?: string | null;
     status?: string;
+    group_id?: string | number | null;
   };
   try {
     body = await req.json();
@@ -52,6 +53,9 @@ export async function PATCH(
   if (body.objective !== undefined) patch.objective = body.objective;
   if (body.start_date !== undefined) patch.start_date = body.start_date;
   if (body.end_date !== undefined) patch.end_date = body.end_date;
+  if (body.group_id !== undefined) {
+    patch.group_id = body.group_id === "" ? null : body.group_id;
+  }
 
   if (body.status !== undefined) {
     // Prevent activating a campaign with zero steps

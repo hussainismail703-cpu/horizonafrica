@@ -11,14 +11,16 @@ import {
   Classification,
   RejectionReason,
   Lead,
+  BroadcastGroup,
 } from "@/lib/types";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
 
 interface EnrolmentsManagerProps {
   campaign: Campaign;
   enrolments: (CampaignEnrolment & { lead: Lead | null })[];
   classificationsByPhone: Record<string, CampaignClassification>;
+  groups: BroadcastGroup[];
 }
 
 const STATUS_OPTIONS: EnrolmentStatus[] = [
@@ -60,9 +62,14 @@ export function EnrolmentsManager({
   campaign,
   enrolments,
   classificationsByPhone,
+  groups,
 }: EnrolmentsManagerProps) {
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [showEnrolPanel, setShowEnrolPanel] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [manualPhones, setManualPhones] = useState("");
+  const [enrolling, setEnrolling] = useState(false);
 
   async function overrideStatus(enrolId: string, status: EnrolmentStatus) {
     setUpdatingId(enrolId);
@@ -115,6 +122,51 @@ export function EnrolmentsManager({
     }
   }
 
+  async function enrolContacts() {
+    if (!selectedGroupId && !manualPhones.trim()) {
+      toast.error("Select a group or enter phone numbers");
+      return;
+    }
+    setEnrolling(true);
+    try {
+      const payload: { campaign_id: string; group_id?: number; phone_numbers?: string[] } = {
+        campaign_id: campaign.id,
+      };
+      if (manualPhones.trim()) {
+        payload.phone_numbers = manualPhones
+          .split(/[\n,]/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+      } else if (selectedGroupId) {
+        payload.group_id = Number(selectedGroupId);
+      }
+
+      const res = await fetch("/api/campaigns/enrolments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to enrol contacts");
+        return;
+      }
+      toast.success(
+        `Enrolled ${data.enrolled} contact${data.enrolled === 1 ? "" : "s"}${
+          data.skipped > 0 ? ` (${data.skipped} already active)` : ""
+        }`
+      );
+      setShowEnrolPanel(false);
+      setSelectedGroupId("");
+      setManualPhones("");
+      router.refresh();
+    } catch {
+      toast.error("Network error enrolling contacts");
+    } finally {
+      setEnrolling(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -125,10 +177,86 @@ export function EnrolmentsManager({
           <ArrowLeft className="h-4 w-4" />
           Back to Campaign
         </Link>
-        <h1 className="text-lg font-semibold text-on-surface">
-          Enrolments — {campaign.name}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold text-on-surface">
+            Enrolments — {campaign.name}
+          </h1>
+          <button
+            onClick={() => setShowEnrolPanel(!showEnrolPanel)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:brightness-110"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Enrol Contacts
+          </button>
+        </div>
       </div>
+
+      {/* Enrol Contacts Panel */}
+      {showEnrolPanel && (
+        <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+          <h2 className="mb-4 text-base font-semibold text-on-surface">
+            Add Contacts to Campaign
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                Enrol from Group
+              </label>
+              <select
+                value={selectedGroupId}
+                onChange={(e) => {
+                  setSelectedGroupId(e.target.value);
+                  if (e.target.value) setManualPhones("");
+                }}
+                className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
+              >
+                <option value="">— Select a group —</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.group_label} ({g.group_name})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="text-center text-xs text-on-surface-variant">— or —</div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                Enter Phone Numbers Manually
+              </label>
+              <textarea
+                value={manualPhones}
+                onChange={(e) => {
+                  setManualPhones(e.target.value);
+                  if (e.target.value) setSelectedGroupId("");
+                }}
+                rows={3}
+                placeholder="e.g. 27821234567, 27837654321 (one per line or comma-separated)"
+                className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowEnrolPanel(false);
+                  setSelectedGroupId("");
+                  setManualPhones("");
+                }}
+                className="rounded-lg px-4 py-2.5 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={enrolContacts}
+                disabled={enrolling || (!selectedGroupId && !manualPhones.trim())}
+                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:brightness-110 disabled:opacity-50"
+              >
+                {enrolling && <Loader2 className="h-4 w-4 animate-spin" />}
+                {enrolling ? "Enrolling…" : "Enrol Contacts"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {enrolments.length === 0 ? (
         <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-12 text-center">

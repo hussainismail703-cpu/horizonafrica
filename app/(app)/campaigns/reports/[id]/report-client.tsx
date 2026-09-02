@@ -160,7 +160,7 @@ export function CampaignReportClient({ stats }: Props) {
       {/* Rate summary */}
       <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
         <h2 className="mb-5 text-lg font-semibold text-on-surface">Rate Summary</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-surface-variant bg-surface-container-low p-4">
             <p className="text-xs font-medium uppercase tracking-wider text-on-surface-variant">
               Delivery Rate
@@ -170,6 +170,17 @@ export function CampaignReportClient({ stats }: Props) {
             </p>
             <p className="mt-1 text-xs text-on-surface-variant">
               {stats.deliveredCount} delivered / {stats.messagesSent} sent
+            </p>
+          </div>
+          <div className="rounded-lg border border-surface-variant bg-surface-container-low p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-on-surface-variant">
+              Read Rate
+            </p>
+            <p className="mt-1 text-2xl font-bold text-on-surface">
+              {rateLabel(stats.readRate)}
+            </p>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              {stats.readCount} read / {stats.deliveredCount} delivered
             </p>
           </div>
           <div className="rounded-lg border border-surface-variant bg-surface-container-low p-4">

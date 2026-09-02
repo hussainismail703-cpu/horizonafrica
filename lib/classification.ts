@@ -269,32 +269,52 @@ export async function classifyResponse(
       classification: result.classification,
       rejection_reason: result.rejection_reason ?? null,
       confidence: result.confidence,
-      classified_by: result.method === "keyword" ? "ai" : "ai", // both are automated
+      classified_by: "ai", // both keyword and AI classification are automated
       original_ai_classification: result.classification,
     });
   }
 
-  // 6. Update lead profile if not_interested
-  if (result.classification === "not_interested" || result.classification === "already_has_service") {
-    const { data: enrolment } = await supabase
-      .from("campaign_enrolments")
-      .select("lead_id")
-      .eq("id", enrolId)
+  // 6. Update lead profile with campaign context
+  const { data: enrolment } = await supabase
+    .from("campaign_enrolments")
+    .select("lead_id")
+    .eq("id", enrolId)
+    .single();
+
+  if (enrolment?.lead_id) {
+    // Fetch existing notes so we can append (not overwrite)
+    const { data: existingLead } = await supabase
+      .from("leads")
+      .select("notes")
+      .eq("id", enrolment.lead_id)
       .single();
 
-    if (enrolment?.lead_id) {
-      const noteText = `Campaign ${campaignId}: ${result.classification}${
-        result.rejection_reason ? ` (${result.rejection_reason})` : ""
-      }`;
-      await supabase
-        .from("leads")
-        .update({
-          notes: noteText,
-          status: "lost",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", enrolment.lead_id);
+    const noteText = `Campaign ${campaignId}: ${result.classification}${
+      result.rejection_reason ? ` (${result.rejection_reason})` : ""
+    }`;
+    const updatedNotes = existingLead?.notes
+      ? `${existingLead.notes}\n${noteText}`
+      : noteText;
+
+    const leadUpdate: Record<string, unknown> = {
+      notes: updatedNotes,
+      last_campaign_response: messageText,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Set rejection reason if classified as not_interested or already_has_service
+    if (
+      result.classification === "not_interested" ||
+      result.classification === "already_has_service"
+    ) {
+      leadUpdate.status = "lost";
+      leadUpdate.rejection_reason = result.rejection_reason ?? null;
     }
+
+    await supabase
+      .from("leads")
+      .update(leadUpdate)
+      .eq("id", enrolment.lead_id);
   }
 
   return result;

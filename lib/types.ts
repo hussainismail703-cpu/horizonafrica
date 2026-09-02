@@ -23,6 +23,9 @@ export interface Lead {
   follow_up_sent_at: string | null;
   offered_package: string | null;
   needs_escalation: boolean | null;
+  last_campaign_contact_date: string | null;
+  last_campaign_response: string | null;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +137,7 @@ export interface Campaign {
   status: CampaignStatus;
   start_date: string | null;
   end_date: string | null;
+  group_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -154,6 +158,7 @@ export interface CampaignEnrolment {
   lead_id: number | null;
   current_step: number;
   status: EnrolmentStatus;
+  nurture_flag: boolean;
   enrolled_at: string;
   updated_at: string;
 }

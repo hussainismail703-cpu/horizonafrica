@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       objective: body.objective ?? null,
       start_date: body.start_date ?? null,
       end_date: body.end_date ?? null,
+      group_id: body.group_id ?? null,
       status: "draft",
     })
     .select("id")
