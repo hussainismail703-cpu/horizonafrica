@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const MAX_NAME_LENGTH = 200;
+
 // POST /api/campaigns — create a new campaign
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -25,15 +27,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body.name || !body.name.trim()) {
+  // Handle null body from parsed "null" JSON
+  if (body === null || typeof body !== "object") {
+    return NextResponse.json({ error: "Request body must be a JSON object" }, { status: 400 });
+  }
+
+  if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  // Strip null bytes which Postgres rejects
+  const cleanName = body.name.replace(/\x00/g, "").trim();
+  if (!cleanName) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+  if (cleanName.length > MAX_NAME_LENGTH) {
+    return NextResponse.json(
+      { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer` },
+      { status: 400 }
+    );
   }
 
   // Prevent duplicate names
   const { data: existing } = await supabase
     .from("campaigns")
     .select("id")
-    .eq("name", body.name.trim())
+    .eq("name", cleanName)
     .maybeSingle();
 
   if (existing) {
@@ -43,11 +62,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const cleanObjective = typeof body.objective === "string" ? body.objective.replace(/\x00/g, "") : body.objective ?? null;
+
   const { data, error } = await supabase
     .from("campaigns")
     .insert({
-      name: body.name.trim(),
-      objective: body.objective ?? null,
+      name: cleanName,
+      objective: cleanObjective,
       start_date: body.start_date ?? null,
       end_date: body.end_date ?? null,
       group_id: body.group_id ?? null,

@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // Handle null body
+  if (body === null || typeof body !== "object") {
+    return NextResponse.json({ error: "Request body must be a JSON object" }, { status: 400 });
+  }
+
   const campaignId = body.campaign_id;
   if (!campaignId) {
     return NextResponse.json({ error: "campaign_id is required" }, { status: 400 });

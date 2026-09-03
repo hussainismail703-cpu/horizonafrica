@@ -64,7 +64,7 @@ export function CreateCampaignForm({ groups }: CreateCampaignFormProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          maxLength={120}
+          maxLength={200}
           placeholder="e.g. Fibre Lead Re-Engagement"
           className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none transition-colors focus:border-primary"
         />
@@ -78,6 +78,7 @@ export function CreateCampaignForm({ groups }: CreateCampaignFormProps) {
           value={objective}
           onChange={(e) => setObjective(e.target.value)}
           rows={3}
+          maxLength={2000}
           placeholder="What is this campaign trying to achieve?"
           className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none transition-colors focus:border-primary"
         />
