@@ -43,6 +43,19 @@ export interface CampaignStats {
   completedEnrolled: number;
   respondedEnrolled: number;
   removedEnrolled: number;
+  // Funnel metrics (Fibre Re-Engagement extension)
+  engagedCount: number; // needs_information classification (engagement signal)
+  interestedCount: number; // interested classification (sales-qualified)
+  callbackRequestedCount: number; // callback_requested classification
+  callingQueueCount: number; // total items in calling_queue for this campaign
+  callingQueuePending: number;
+  callingQueueConverted: number;
+  notInterestedCount: number;
+  optedOutCount: number;
+  noResponseFinalCount: number;
+  classificationBreakdown: { classification: string; count: number; percentage: number | null }[];
+  finalOutcomeBreakdown: { outcome: string; count: number }[];
+  statusCounts: Record<string, number>;
   failedMessages: number;
   failedInteractions: {
     id: string;
@@ -214,11 +227,11 @@ export async function getCampaignStats(
 
   if (error || !campaign) return null;
 
-  const [enrolmentsRes, interactionsRes, classificationsRes, recentRes, errorsRes] =
+  const [enrolmentsRes, interactionsRes, classificationsRes, recentRes, errorsRes, queueRes] =
     await Promise.all([
       supabase
         .from("campaign_enrolments")
-        .select("current_step, status")
+        .select("current_step, status, final_outcome")
         .eq("campaign_id", campaignId),
       supabase
         .from("campaign_interactions")
@@ -241,6 +254,10 @@ export async function getCampaignStats(
         .eq("campaign_id", campaignId)
         .order("created_at", { ascending: false })
         .limit(20),
+      supabase
+        .from("calling_queue")
+        .select("queue_status")
+        .eq("campaign_id", campaignId),
     ]);
 
   const enrolments = enrolmentsRes.data ?? [];
@@ -248,6 +265,7 @@ export async function getCampaignStats(
   const classifications = classificationsRes.data ?? [];
   const recentInteractions = recentRes.data ?? [];
   const recentErrors = errorsRes.data ?? [];
+  const queueItems = queueRes.data ?? [];
 
   const outbound = interactions.filter((i) => i.message_type === "outbound");
   const inbound = interactions.filter((i) => i.message_type === "inbound");
@@ -303,13 +321,57 @@ export async function getCampaignStats(
     .map(([step, v]) => ({ step, ...v }))
     .sort((a, b) => a.step - b.step);
 
-  // Enrolment status counts
-  const statusCounts = { active: 0, responded: 0, completed: 0, removed: 0 };
+  // Enrolment status counts — include all statuses (new + legacy)
+  const ALL_STATUSES = [
+    "active", "responded", "completed", "removed",
+    "interested", "callback_requested", "not_interested",
+    "opted_out", "no_response_final", "other_invalid",
+  ];
+  const statusCounts: Record<string, number> = {};
+  for (const s of ALL_STATUSES) statusCounts[s] = 0;
   for (const e of enrolments) {
     if (e.status in statusCounts) {
-      statusCounts[e.status as keyof typeof statusCounts] += 1;
+      statusCounts[e.status] += 1;
     }
   }
+
+  // Classification breakdown (count + percentage per classification)
+  const classCountMap = new Map<string, number>();
+  for (const c of classifications) {
+    classCountMap.set(c.classification, (classCountMap.get(c.classification) ?? 0) + 1);
+  }
+  const totalClassifications = classifications.length;
+  const classificationBreakdown = Array.from(classCountMap.entries())
+    .map(([classification, count]) => ({
+      classification,
+      count,
+      percentage: pct(count, totalClassifications),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Final outcome breakdown (count per final_outcome label)
+  const outcomeMap = new Map<string, number>();
+  for (const e of enrolments) {
+    if (e.final_outcome) {
+      outcomeMap.set(e.final_outcome, (outcomeMap.get(e.final_outcome) ?? 0) + 1);
+    }
+  }
+  const finalOutcomeBreakdown = Array.from(outcomeMap.entries())
+    .map(([outcome, count]) => ({ outcome, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Funnel metrics from classifications
+  const engagedCount = classifications.filter((c) => c.classification === "needs_information").length;
+  const interestedCount = classifications.filter((c) => c.classification === "interested").length;
+  const callbackRequestedCount = classifications.filter((c) => c.classification === "callback_requested").length;
+  const notInterestedClassCount = classifications.filter(
+    (c) => c.classification === "not_interested" || c.classification === "already_has_service"
+  ).length;
+
+  // Calling queue metrics
+  const callingQueueCount = queueItems.length;
+  const callingQueuePending = queueItems.filter((q) => q.queue_status === "pending").length;
+  const callingQueueConverted = queueItems.filter((q) => q.queue_status === "converted").length;
 
   // Failed interactions (with error detail)
   const failedInteractions = interactions
@@ -342,6 +404,19 @@ export async function getCampaignStats(
     completedEnrolled: statusCounts.completed,
     respondedEnrolled: statusCounts.responded,
     removedEnrolled: statusCounts.removed,
+    // Funnel metrics
+    engagedCount,
+    interestedCount,
+    callbackRequestedCount,
+    callingQueueCount,
+    callingQueuePending,
+    callingQueueConverted,
+    notInterestedCount: notInterestedClassCount,
+    optedOutCount: statusCounts.opted_out,
+    noResponseFinalCount: statusCounts.no_response_final,
+    classificationBreakdown,
+    finalOutcomeBreakdown,
+    statusCounts,
     failedMessages: failed,
     failedInteractions,
     recentErrors,

@@ -103,7 +103,17 @@ export interface StaffAlert {
 
 export type CampaignStatus = "draft" | "active" | "paused" | "completed" | "stopped";
 
-export type EnrolmentStatus = "active" | "responded" | "completed" | "removed";
+export type EnrolmentStatus =
+  | "active"
+  | "responded"
+  | "completed"
+  | "removed"
+  | "interested"
+  | "callback_requested"
+  | "not_interested"
+  | "opted_out"
+  | "no_response_final"
+  | "other_invalid";
 
 export type InteractionType = "outbound" | "inbound";
 
@@ -116,7 +126,8 @@ export type Classification =
   | "needs_information"
   | "no_response"
   | "other"
-  | "uncertain";
+  | "uncertain"
+  | "callback_requested";
 
 export type RejectionReason =
   | "price"
@@ -148,6 +159,11 @@ export interface CampaignStep {
   step_number: number;
   delay_days: number;
   template_name: string;
+  template_parameters?: Array<{
+    component: string;
+    source: "custom" | "contact_name";
+    value?: string;
+  }> | null;
   created_at: string;
 }
 
@@ -158,6 +174,7 @@ export interface CampaignEnrolment {
   lead_id: number | null;
   current_step: number;
   status: EnrolmentStatus;
+  final_outcome: string | null;
   nurture_flag: boolean;
   enrolled_at: string;
   updated_at: string;
@@ -213,4 +230,40 @@ export interface CampaignError {
   error_message: string | null;
   context: Record<string, unknown> | null;
   created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Calling Queue + Opt-out types (Fibre Re-Engagement extension)
+// ---------------------------------------------------------------------------
+
+export type QueueStatus = "pending" | "called" | "converted" | "lost" | "callback_scheduled";
+
+export interface CallingQueueItem {
+  id: string;
+  campaign_id: string | null;
+  enrolment_id: string | null;
+  phone_number: string;
+  lead_id: number | null;
+  full_name: string | null;
+  email: string | null;
+  preferred_package: string | null;
+  customer_request: string | null;
+  preferred_callback_time: string | null;
+  campaign_source: string | null;
+  campaign_stage: string | null;
+  final_outcome: string | null;
+  queue_status: QueueStatus;
+  called_at: string | null;
+  called_by: string | null;
+  call_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OptOutEntry {
+  id: string;
+  phone_number: string;
+  reason: string | null;
+  source_campaign_id: string | null;
+  opted_out_at: string;
 }

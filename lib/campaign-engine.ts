@@ -29,12 +29,19 @@ interface CampaignRow {
   end_date: string | null;
 }
 
+interface TemplateParamConfig {
+  component: string; // "header" | "body"
+  source: "custom" | "contact_name";
+  value?: string;
+}
+
 interface StepRow {
   id: string;
   campaign_id: string;
   step_number: number;
   delay_days: number;
   template_name: string;
+  template_parameters?: TemplateParamConfig[] | null;
 }
 
 interface EnrolmentRow {
@@ -44,6 +51,7 @@ interface EnrolmentRow {
   current_step: number;
   status: string;
   enrolled_at: string;
+  lead_id?: number | null;
 }
 
 interface MetaSendResponse {
@@ -70,16 +78,29 @@ export async function processCampaigns(): Promise<CampaignProcessingResult> {
   };
 
   // 1. Mark campaigns past their end_date as completed
+  //    and close all remaining active enrolments as no_response_final
   const now = new Date().toISOString();
-  const { error: completeErr } = await supabase
+  const { data: expiredCampaigns, error: completeErr } = await supabase
     .from("campaigns")
-    .update({ status: "completed" })
+    .select("id")
     .eq("status", "active")
     .not("end_date", "is", null)
     .lt("end_date", now);
 
   if (completeErr) {
-    result.errors.push(`Failed to complete expired campaigns: ${completeErr.message}`);
+    result.errors.push(`Failed to fetch expired campaigns: ${completeErr.message}`);
+  } else if (expiredCampaigns && expiredCampaigns.length > 0) {
+    // Close all remaining active enrolments before marking campaign completed
+    for (const c of expiredCampaigns) {
+      await closeCampaign(c.id);
+    }
+    const { error: updateErr } = await supabase
+      .from("campaigns")
+      .update({ status: "completed" })
+      .in("id", expiredCampaigns.map((c) => c.id));
+    if (updateErr) {
+      result.errors.push(`Failed to complete expired campaigns: ${updateErr.message}`);
+    }
   }
 
   // 2. Fetch all active campaigns
@@ -136,7 +157,7 @@ export async function processCampaign(
   // Load steps ordered by step_number
   const { data: steps, error: stepsErr } = await supabase
     .from("campaign_steps")
-    .select("id, campaign_id, step_number, delay_days, template_name")
+    .select("id, campaign_id, step_number, delay_days, template_name, template_parameters")
     .eq("campaign_id", campaignId)
     .order("step_number", { ascending: true });
 
@@ -155,10 +176,16 @@ export async function processCampaign(
     return result; // no steps configured
   }
 
-  // Load active enrolments
+  // Load active enrolments, excluding opted-out phone numbers
+  const { data: optedOutPhones } = await supabase
+    .from("opt_out_list")
+    .select("phone_number");
+
+  const optedOutSet = new Set((optedOutPhones ?? []).map((o) => o.phone_number));
+
   const { data: enrolments, error: enrolErr } = await supabase
     .from("campaign_enrolments")
-    .select("id, campaign_id, phone_number, current_step, status, enrolled_at")
+    .select("id, campaign_id, phone_number, current_step, status, enrolled_at, lead_id")
     .eq("campaign_id", campaignId)
     .eq("status", "active");
 
@@ -175,6 +202,11 @@ export async function processCampaign(
   const now = new Date();
 
   for (const enrol of (enrolments ?? []) as EnrolmentRow[]) {
+    // Skip opted-out phone numbers
+    if (optedOutSet.has(enrol.phone_number)) {
+      continue;
+    }
+
     // current_step is 0-indexed: 0 means "about to send step 1"
     const stepIndex = enrol.current_step;
     if (stepIndex >= stepList.length) {
@@ -220,7 +252,9 @@ export async function processCampaign(
       step.template_name,
       campaignId,
       enrol.id,
-      step.step_number
+      step.step_number,
+      step.template_parameters ?? null,
+      enrol.lead_id ?? null
     );
 
     if (sendRes.success) {
@@ -247,7 +281,9 @@ export async function sendCampaignMessage(
   templateName: string,
   campaignId: string,
   enrolId: string,
-  stepNumber: number
+  stepNumber: number,
+  templateParameters?: TemplateParamConfig[] | null,
+  leadId?: number | null
 ): Promise<SendResult> {
   const supabase = createServiceClient();
 
@@ -259,15 +295,51 @@ export async function sendCampaignMessage(
   }
 
   const phone = phoneNumber.replace(/\D/g, "");
+
+  // Build template payload, optionally with components/parameters
+  const template: Record<string, unknown> = {
+    name: templateName,
+    language: { code: "en_US" },
+  };
+
+  if (templateParameters && templateParameters.length > 0) {
+    // Resolve contact_name source values from the lead record
+    let contactName: string | null = null;
+    if (templateParameters.some((p) => p.source === "contact_name") && leadId) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("full_name")
+        .eq("id", leadId)
+        .single();
+      contactName = lead?.full_name ?? null;
+    }
+
+    // Group params by component type (header, body)
+    const byComponent: Record<string, TemplateParamConfig[]> = {};
+    for (const p of templateParameters) {
+      const compKey = p.component ?? "body";
+      if (!byComponent[compKey]) byComponent[compKey] = [];
+      byComponent[compKey].push(p);
+    }
+
+    template.components = Object.entries(byComponent).map(([compType, compParams]) => ({
+      type: compType,
+      parameters: compParams.map((p) => {
+        const value =
+          p.source === "contact_name"
+            ? (contactName?.trim() || "there")
+            : (p.value ?? "");
+        return { type: "text", text: value };
+      }),
+    }));
+  }
+
   const payload = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: phone,
     type: "template" as const,
-    template: {
-      name: templateName,
-      language: { code: "en_US" },
-    },
+    template,
   };
 
   try {
@@ -419,8 +491,9 @@ export async function logCampaignError(args: {
 
 /**
  * Advance the enrolment to the next step, or mark completed if past the last step.
- * When an enrolment reaches completed without ever responding (status was still
- * 'active'), set nurture_flag = true so they can be flagged for nurture campaigns.
+ * When an enrolment reaches the end without ever responding (status was still
+ * 'active'), set status to 'no_response_final' + nurture_flag = true so they
+ * can be flagged for the future re-marketing / nurture pool.
  */
 export async function advanceEnrolment(
   enrolId: string,
@@ -437,20 +510,52 @@ export async function advanceEnrolment(
 
   const nextStep = enrol.current_step + 1;
   if (nextStep >= totalSteps) {
-    // If the enrolment was still 'active' (never responded), flag for nurture
-    const nurtureFlag = enrol.status === "active";
-    await supabase
-      .from("campaign_enrolments")
-      .update({
-        current_step: nextStep,
-        status: "completed",
-        nurture_flag: nurtureFlag,
-      })
-      .eq("id", enrolId);
+    if (enrol.status === "active") {
+      // Never responded — mark as no_response_final + nurture flag
+      await supabase
+        .from("campaign_enrolments")
+        .update({
+          current_step: nextStep,
+          status: "no_response_final",
+          nurture_flag: true,
+          final_outcome: "NO RESPONSE – FINAL ATTEMPT",
+        })
+        .eq("id", enrolId);
+    } else {
+      // Responded but reached end of sequence — mark completed
+      await supabase
+        .from("campaign_enrolments")
+        .update({
+          current_step: nextStep,
+          status: "completed",
+        })
+        .eq("id", enrolId);
+    }
   } else {
     await supabase
       .from("campaign_enrolments")
       .update({ current_step: nextStep })
       .eq("id", enrolId);
   }
+}
+
+/**
+ * Close a campaign: mark all remaining 'active' enrolments as no_response_final
+ * + nurture_flag. Called when a campaign passes its end_date.
+ */
+export async function closeCampaign(campaignId: string): Promise<number> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("campaign_enrolments")
+    .update({
+      status: "no_response_final",
+      nurture_flag: true,
+      final_outcome: "NO RESPONSE – FINAL ATTEMPT",
+    })
+    .eq("campaign_id", campaignId)
+    .eq("status", "active")
+    .select("id");
+
+  if (error) return 0;
+  return data?.length ?? 0;
 }

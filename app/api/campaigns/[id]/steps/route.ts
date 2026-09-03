@@ -28,7 +28,7 @@ export async function PUT(
   }
 
   let body: {
-    steps: { step_number: number; delay_days: number; template_name: string }[];
+    steps: { step_number: number; delay_days: number; template_name: string; template_parameters?: Array<{ component: string; source: "custom" | "contact_name"; value?: string }> | null }[];
   };
   try {
     body = await req.json();
@@ -95,6 +95,7 @@ export async function PUT(
       step_number: i + 1,
       delay_days: s.delay_days,
       template_name: s.template_name.replace(/\x00/g, ""),
+      template_parameters: s.template_parameters ?? null,
     }));
 
     // Insert in batches to avoid Postgres parameter limits

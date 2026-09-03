@@ -105,17 +105,107 @@ export function CampaignReportClient({ stats }: Props) {
         />
       </div>
 
+      {/* Sales Funnel Visualization */}
+      <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+        <h2 className="mb-5 text-lg font-semibold text-on-surface">
+          Sales Funnel
+        </h2>
+        <p className="mb-4 text-xs text-on-surface-variant">
+          Leads &rarr; Responses &rarr; Engaged &rarr; Interested &rarr; Calling Queue &rarr; Converted
+        </p>
+        <FunnelBar
+          stages={[
+            { label: "Leads", value: stats.totalEnrolled, color: "bg-primary" },
+            { label: "Responses", value: stats.responses, color: "bg-secondary" },
+            { label: "Engaged", value: stats.engagedCount, color: "bg-tertiary" },
+            { label: "Interested", value: stats.interestedCount + stats.callbackRequestedCount, color: "bg-secondary" },
+            { label: "Calling Queue", value: stats.callingQueueCount, color: "bg-primary" },
+            { label: "Converted", value: stats.converted, color: "bg-tertiary" },
+          ]}
+        />
+      </div>
+
+      {/* Classification breakdown */}
+      {stats.classificationBreakdown.length > 0 && (
+        <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+          <h2 className="mb-5 text-lg font-semibold text-on-surface">
+            Classification Breakdown
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-surface-variant text-xs uppercase tracking-wider text-on-surface-variant">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Classification</th>
+                  <th className="px-4 py-3 font-semibold">Count</th>
+                  <th className="px-4 py-3 font-semibold">Percentage</th>
+                  <th className="px-4 py-3 font-semibold">Distribution</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-variant/50">
+                {stats.classificationBreakdown.map((row) => (
+                  <tr key={row.classification} className="hover:bg-surface-container-low">
+                    <td className="px-4 py-3 font-medium text-on-surface capitalize">
+                      {row.classification.replace(/_/g, " ")}
+                    </td>
+                    <td className="px-4 py-3 text-on-surface-variant">{row.count}</td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {row.percentage === null ? "N/A" : `${row.percentage}%`}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="h-2 w-full max-w-xs rounded-full bg-surface-container-high">
+                        <div
+                          className="h-2 rounded-full bg-primary"
+                          style={{ width: `${row.percentage ?? 0}%` }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Final outcome distribution */}
+      {stats.finalOutcomeBreakdown.length > 0 && (
+        <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
+          <h2 className="mb-5 text-lg font-semibold text-on-surface">
+            Final Outcome Distribution
+          </h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {stats.finalOutcomeBreakdown.map((row) => (
+              <div
+                key={row.outcome}
+                className="rounded-lg border border-surface-variant bg-surface-container-low p-4 text-center"
+              >
+                <p className="text-3xl font-bold text-on-surface">{row.count}</p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-wider text-on-surface-variant">
+                  {row.outcome}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Enrolment status breakdown */}
       <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
         <h2 className="mb-5 text-lg font-semibold text-on-surface">
           Enrolment Status Breakdown
         </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
           {[
-            { label: "Active", value: stats.activeEnrolled, color: "text-secondary" },
-            { label: "Responded", value: stats.respondedEnrolled, color: "text-tertiary" },
-            { label: "Completed", value: stats.completedEnrolled, color: "text-on-surface" },
-            { label: "Removed", value: stats.removedEnrolled, color: "text-error" },
+            { label: "Active", value: stats.statusCounts.active, color: "text-secondary" },
+            { label: "Responded", value: stats.statusCounts.responded, color: "text-tertiary" },
+            { label: "Interested", value: stats.statusCounts.interested, color: "text-secondary" },
+            { label: "Callback Req.", value: stats.statusCounts.callback_requested, color: "text-secondary" },
+            { label: "Not Interested", value: stats.statusCounts.not_interested, color: "text-error" },
+            { label: "Opted Out", value: stats.statusCounts.opted_out, color: "text-error" },
+            { label: "No Response", value: stats.statusCounts.no_response_final, color: "text-on-surface-variant" },
+            { label: "Completed", value: stats.statusCounts.completed, color: "text-on-surface" },
+            { label: "Removed", value: stats.statusCounts.removed, color: "text-error" },
+            { label: "Other/Invalid", value: stats.statusCounts.other_invalid, color: "text-on-surface-variant" },
           ].map((row) => (
             <div
               key={row.label}
@@ -381,6 +471,54 @@ export function CampaignReportClient({ stats }: Props) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FunnelBar — horizontal funnel visualization
+// ---------------------------------------------------------------------------
+
+interface FunnelStage {
+  label: string;
+  value: number;
+  color: string;
+}
+
+function FunnelBar({ stages }: { stages: FunnelStage[] }) {
+  const maxValue = Math.max(...stages.map((s) => s.value), 1);
+
+  return (
+    <div className="space-y-2">
+      {stages.map((stage, idx) => {
+        const widthPct = Math.max((stage.value / maxValue) * 100, 2);
+        const prevValue = idx > 0 ? stages[idx - 1].value : null;
+        const conversionRate =
+          prevValue !== null && prevValue > 0
+            ? Math.round((stage.value / prevValue) * 1000) / 10
+            : null;
+
+        return (
+          <div key={stage.label} className="flex items-center gap-4">
+            <div className="w-32 shrink-0 text-right text-xs font-semibold text-on-surface-variant">
+              {stage.label}
+            </div>
+            <div className="flex-1">
+              <div className="relative h-10 rounded-lg bg-surface-container-low">
+                <div
+                  className={`flex h-10 items-center justify-end rounded-lg px-3 text-xs font-bold text-on-primary ${stage.color}`}
+                  style={{ width: `${widthPct}%` }}
+                >
+                  {stage.value}
+                </div>
+              </div>
+            </div>
+            <div className="w-16 shrink-0 text-xs text-on-surface-variant">
+              {conversionRate !== null ? `${conversionRate}%` : ""}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

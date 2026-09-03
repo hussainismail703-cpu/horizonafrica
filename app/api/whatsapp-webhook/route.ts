@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
           inbound.phoneNumber,
           inbound.messageBody
         );
-        if (detection) {
+        if (detection && !detection.stop_detected) {
           // Auto-classify the response (keyword-first, AI fallback)
+          // STOP replies are already handled as opt-out — skip classification
           try {
             await classifyResponse(
               inbound.messageBody,

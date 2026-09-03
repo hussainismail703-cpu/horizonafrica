@@ -56,32 +56,45 @@ const KEYWORD_RULES: KeywordRule[] = [
     classification: "already_has_service",
     rejection_reason: "competitor",
   },
+  // Callback requested — wants to speak to a consultant (distinct from "interested/ready to proceed")
   {
-    patterns: /stop|unsubscribe|opt out|do not contact|don'?t contact me|remove me/i,
-    classification: "not_interested",
-    rejection_reason: "not_needed",
+    patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|please call me|i'?d like to speak|want to speak to a consultant|consultant to call/i,
+    classification: "callback_requested",
   },
-  // Interested
+  {
+    patterns: /^2\b/i, // numbered menu response "2 – I'd like to speak to a consultant"
+    classification: "callback_requested",
+  },
+  // Interested — explicit purchase intent / ready to proceed
   {
     patterns: /^(yes|interested|i want fibre|let'?s do it|sign me up|i'?m in)\b/i,
     classification: "interested",
   },
   {
-    patterns: /please call me|contact me|have someone call|i want to apply|how do i apply|send someone|consultant|call me back/i,
+    patterns: /i want to apply|how do i apply|send someone|i want the package|please contact me|contact me to apply/i,
+    classification: "interested",
+  },
+  {
+    patterns: /^3\b/i, // numbered menu response "3 – I'm interested, please contact me"
     classification: "interested",
   },
   {
     patterns: /i'?ll take|i want the|r425 package|50 mbps package|25 mbps package|40 mbps package|i want that package/i,
     classification: "interested",
   },
-  // Needs information
+  // Needs information — engagement, not sales-qualified
   {
     patterns: /how much|what'?s the price|what does it cost|pricing|tell me more|more info|more information|send details|what packages|what speeds|is fibre available|coverage/i,
     classification: "needs_information",
   },
   {
-    patterns: /^(1|2|3)\b/i, // numbered menu responses from the campaign template
+    patterns: /^1\b/i, // numbered menu response "1 – I'd like more information"
     classification: "needs_information",
+  },
+  // Not interested — numbered menu response "4"
+  {
+    patterns: /^4\b/i, // numbered menu response "4 – I'm not interested"
+    classification: "not_interested",
   },
 ];
 
@@ -109,13 +122,19 @@ function keywordClassify(text: string): ClassificationResult | null {
 const AI_PROMPT = `You are a WhatsApp response classifier for a Telkom Fibre sales campaign in South Africa.
 
 Classify the customer's WhatsApp response into exactly one of these categories:
-- interested: Customer explicitly wants to proceed, apply, or be contacted by sales
+- interested: Customer explicitly wants to proceed, apply, or wants a specific package
+- callback_requested: Customer wants to speak to a consultant or be called back (not yet ready to apply, but wants human contact)
 - not_interested: Customer clearly declines or rejects the offer
 - already_has_service: Customer already has fibre/internet service
-- needs_information: Customer is asking a question or wants more details before deciding
+- needs_information: Customer is asking a question or wants more details before deciding (engagement, not sales-qualified)
 - no_response: Empty or no meaningful content
 - other: Doesn't fit any category
 - uncertain: Ambiguous, can't determine intent
+
+Key distinction:
+- "How much is the 50 Mbps package?" → needs_information (engagement)
+- "I'd like to speak to a consultant" → callback_requested (wants human contact)
+- "I want the R425 package, please contact me" → interested (sales-qualified, ready to proceed)
 
 If the classification is "not_interested", also identify the rejection_reason (one of):
 - price: Too expensive / budget concerns
@@ -169,6 +188,7 @@ async function aiClassify(text: string): Promise<ClassificationResult | null> {
       "no_response",
       "other",
       "uncertain",
+      "callback_requested",
     ];
 
     if (!parsed.classification || !validClassifications.includes(parsed.classification as Classification)) {
@@ -274,7 +294,23 @@ export async function classifyResponse(
     });
   }
 
-  // 6. Update lead profile with campaign context
+  // 6. Update enrolment status based on classification + insert into calling queue
+  const enrolmentStatusMap: Record<string, { status: string; final_outcome: string }> = {
+    interested: { status: "interested", final_outcome: "INTERESTED – CALLING QUEUE" },
+    callback_requested: { status: "callback_requested", final_outcome: "CALLBACK REQUESTED – CALLING QUEUE" },
+    not_interested: { status: "not_interested", final_outcome: "NOT INTERESTED" },
+    already_has_service: { status: "not_interested", final_outcome: "NOT INTERESTED" },
+  };
+
+  const outcome = enrolmentStatusMap[result.classification];
+  if (outcome) {
+    await supabase
+      .from("campaign_enrolments")
+      .update({ status: outcome.status, final_outcome: outcome.final_outcome })
+      .eq("id", enrolId);
+  }
+
+  // 7. Update lead profile with campaign context
   const { data: enrolment } = await supabase
     .from("campaign_enrolments")
     .select("lead_id")
@@ -315,6 +351,46 @@ export async function classifyResponse(
       .from("leads")
       .update(leadUpdate)
       .eq("id", enrolment.lead_id);
+  }
+
+  // 8. Insert into calling_queue for sales-qualified leads
+  if (result.classification === "interested" || result.classification === "callback_requested") {
+    // Fetch lead profile to populate queue entry
+    let leadData: { full_name: string | null; email: string | null; preferred_package: string | null } | null = null;
+    if (enrolment?.lead_id) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("full_name, email, preferred_package")
+        .eq("id", enrolment.lead_id)
+        .single();
+      leadData = lead;
+    }
+
+    // Avoid duplicate queue entries for the same enrolment
+    const { data: existingQueue } = await supabase
+      .from("calling_queue")
+      .select("id")
+      .eq("enrolment_id", enrolId)
+      .neq("queue_status", "converted")
+      .neq("queue_status", "lost")
+      .maybeSingle();
+
+    if (!existingQueue) {
+      await supabase.from("calling_queue").insert({
+        campaign_id: campaignId,
+        enrolment_id: enrolId,
+        phone_number: phoneNumber,
+        lead_id: enrolment?.lead_id ?? null,
+        full_name: leadData?.full_name ?? null,
+        email: leadData?.email ?? null,
+        preferred_package: leadData?.preferred_package ?? null,
+        customer_request: messageText,
+        campaign_source: "Fibre Lead Re-Engagement",
+        campaign_stage: result.classification === "interested" ? "INTERESTED" : "CALLBACK REQUESTED",
+        final_outcome: outcome?.final_outcome ?? null,
+        queue_status: "pending",
+      });
+    }
   }
 
   return result;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, MessageSquare, Radio, Settings, X, Plus, HelpCircle, LogOut, BarChart3, Bell, FileText, Package, HeartPulse, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, Radio, Settings, X, Plus, HelpCircle, LogOut, BarChart3, Bell, FileText, Package, HeartPulse, Megaphone, PhoneOutgoing } from "lucide-react";
 import logo from "@/app/assets/logo.png";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/conversations", label: "Conversations", icon: MessageSquare },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
+  { href: "/calling-queue", label: "Calling Queue", icon: PhoneOutgoing },
   { href: "/follow-ups", label: "Follow-Ups", icon: Bell },
   { href: "/templates", label: "Templates", icon: FileText },
     { href: "/products", label: "Products", icon: Package },

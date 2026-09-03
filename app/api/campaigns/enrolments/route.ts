@@ -115,11 +115,21 @@ export async function POST(req: NextRequest) {
   // Deduplicate
   const uniquePhones = Array.from(new Set(phoneNumbers));
 
+  // Exclude opted-out phone numbers (global opt-out list)
+  const { data: optedOut } = await supabase
+    .from("opt_out_list")
+    .select("phone_number")
+    .in("phone_number", uniquePhones);
+
+  const optedOutSet = new Set((optedOut ?? []).map((o) => o.phone_number));
+  const enrolablePhones = uniquePhones.filter((p) => !optedOutSet.has(p));
+  const excludedOptOut = uniquePhones.length - enrolablePhones.length;
+
   // Look up existing leads by phone_number to populate lead_id
   const { data: leads } = await supabase
     .from("leads")
     .select("id, phone_number")
-    .in("phone_number", uniquePhones);
+    .in("phone_number", enrolablePhones);
 
   const leadMap = new Map<string, number>();
   for (const lead of leads ?? []) {
@@ -131,7 +141,7 @@ export async function POST(req: NextRequest) {
     .from("campaign_enrolments")
     .select("phone_number, status")
     .eq("campaign_id", campaignId)
-    .in("phone_number", uniquePhones)
+    .in("phone_number", enrolablePhones)
     .neq("status", "removed");
 
   const existingActivePhones = new Set(
@@ -139,7 +149,7 @@ export async function POST(req: NextRequest) {
   );
 
   // Build enrolment rows for phones that don't already have an active enrolment
-  const rowsToInsert = uniquePhones
+  const rowsToInsert = enrolablePhones
     .filter((phone) => !existingActivePhones.has(phone))
     .map((phone) => ({
       campaign_id: campaignId,
@@ -165,12 +175,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const skipped = uniquePhones.length - enrolled;
+  const skipped = enrolablePhones.length - enrolled;
 
   return NextResponse.json(
     {
       enrolled,
       skipped,
+      excluded_opt_out: excludedOptOut,
       errors,
     },
     { status: 201 }

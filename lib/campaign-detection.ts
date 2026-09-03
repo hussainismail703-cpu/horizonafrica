@@ -4,11 +4,16 @@ interface EnrolmentDetection {
   enrolment_id: string;
   campaign_id: string;
   phone_number: string;
+  stop_detected: boolean;
 }
+
+const STOP_PATTERN = /^\s*(stop|unsubscribe|opt out|opt-out|do not contact me|don'?t contact me|remove me)\s*$/i;
 
 /**
  * Check if a phone number is enrolled in an active campaign.
  * If so, mark the enrolment as 'responded' and record the inbound interaction.
+ * If the message is a STOP keyword, mark the enrolment as 'opted_out' and add
+ * the phone to the global opt_out_list.
  * Returns the enrolment info if found, or null otherwise.
  */
 export async function detectAndMarkCampaignResponse(
@@ -30,13 +35,9 @@ export async function detectAndMarkCampaignResponse(
 
   if (!enrolment) return null;
 
-  // Mark the enrolment as 'responded' — this stops further campaign messages
-  await supabase
-    .from("campaign_enrolments")
-    .update({ status: "responded" })
-    .eq("id", enrolment.id);
+  const isStop = messageBody ? STOP_PATTERN.test(messageBody.trim()) : false;
 
-  // Record the inbound interaction
+  // Record the inbound interaction (always, even for STOP)
   await supabase.from("campaign_interactions").insert({
     campaign_id: enrolment.campaign_id,
     enrol_id: enrolment.id,
@@ -49,11 +50,62 @@ export async function detectAndMarkCampaignResponse(
     meta_message_id: null,
   });
 
+  if (isStop) {
+    // Mark enrolment as opted_out with final outcome label
+    await supabase
+      .from("campaign_enrolments")
+      .update({
+        status: "opted_out",
+        final_outcome: "OPTED OUT",
+      })
+      .eq("id", enrolment.id);
+
+    // Add to global opt_out_list (upsert — phone is unique)
+    await supabase
+      .from("opt_out_list")
+      .upsert(
+        {
+          phone_number: phone,
+          reason: "STOP keyword",
+          source_campaign_id: enrolment.campaign_id,
+        },
+        { onConflict: "phone_number" }
+      );
+
+    return {
+      enrolment_id: enrolment.id,
+      campaign_id: enrolment.campaign_id,
+      phone_number: phone,
+      stop_detected: true,
+    };
+  }
+
+  // Normal response — mark as 'responded' to stop further campaign messages
+  await supabase
+    .from("campaign_enrolments")
+    .update({ status: "responded" })
+    .eq("id", enrolment.id);
+
   return {
     enrolment_id: enrolment.id,
     campaign_id: enrolment.campaign_id,
     phone_number: phone,
+    stop_detected: false,
   };
+}
+
+/**
+ * Check if a phone number is in the global opt-out list.
+ */
+export async function isOptedOut(phoneNumber: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const phone = phoneNumber.replace(/\D/g, "");
+  const { data } = await supabase
+    .from("opt_out_list")
+    .select("id")
+    .eq("phone_number", phone)
+    .maybeSingle();
+  return !!data;
 }
 
 /**

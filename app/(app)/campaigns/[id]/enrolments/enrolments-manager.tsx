@@ -56,6 +56,12 @@ const STATUS_STYLES: Record<EnrolmentStatus, string> = {
   responded: "bg-primary-container/40 text-on-primary-container",
   completed: "bg-tertiary-container/40 text-on-tertiary",
   removed: "bg-error-container/40 text-on-error",
+  interested: "bg-secondary-container/40 text-secondary",
+  callback_requested: "bg-secondary-container/30 text-secondary",
+  not_interested: "bg-error-container/30 text-error",
+  opted_out: "bg-error-container/40 text-error",
+  no_response_final: "bg-surface-container-high text-on-surface-variant",
+  other_invalid: "bg-surface-container-high text-on-surface-variant",
 };
 
 export function EnrolmentsManager({
