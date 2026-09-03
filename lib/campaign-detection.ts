@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 interface EnrolmentDetection {
   enrolment_id: string;
@@ -15,7 +15,7 @@ export async function detectAndMarkCampaignResponse(
   phoneNumber: string,
   messageBody: string | null
 ): Promise<EnrolmentDetection | null> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const phone = phoneNumber.replace(/\D/g, "");
 
   // Find any active enrolment for this phone number

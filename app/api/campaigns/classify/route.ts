@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { classifyResponse } from "@/lib/classification";
 
 // POST /api/campaigns/classify
@@ -10,15 +11,20 @@ import { classifyResponse } from "@/lib/classification";
 // If campaign_id/enrol_id are not provided, they are looked up from the
 // most recent active/responded enrolment for this phone number.
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Allow either authenticated dashboard users or n8n with the APP_SECRET
   const authHeader = req.headers.get("authorization");
   const appSecret = process.env.APP_SECRET;
   const isAppSecretAuth = appSecret && authHeader === `Bearer ${appSecret}`;
+
+  // Use service-role client for n8n/APP_SECRET auth (no user session).
+  // Use cookie-based client for dashboard users (RLS applies).
+  let supabase;
+  let user = null;
+  if (isAppSecretAuth) {
+    supabase = createServiceClient();
+  } else {
+    supabase = await createClient();
+    ({ data: { user } } = await supabase.auth.getUser());
+  }
 
   if (!user && !isAppSecretAuth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -60,7 +60,7 @@ interface MetaSendResponse {
  * Process all active campaigns. Main entry point for the cron job.
  */
 export async function processCampaigns(): Promise<CampaignProcessingResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const result: CampaignProcessingResult = {
     campaigns_processed: 0,
     messages_sent: 0,
@@ -124,7 +124,7 @@ export async function processCampaigns(): Promise<CampaignProcessingResult> {
 export async function processCampaign(
   campaignId: string
 ): Promise<CampaignProcessingResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const result: CampaignProcessingResult = {
     campaigns_processed: 1,
     messages_sent: 0,
@@ -249,7 +249,7 @@ export async function sendCampaignMessage(
   enrolId: string,
   stepNumber: number
 ): Promise<SendResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   if (!META_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
     return {
@@ -380,7 +380,7 @@ export async function recordInteraction(args: {
   metaMessageId?: string | null;
   metaError?: string | null;
 }): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   await supabase.from("campaign_interactions").insert({
     campaign_id: args.campaignId,
     enrol_id: args.enrolId,
@@ -406,7 +406,7 @@ export async function logCampaignError(args: {
   errorMessage?: string | null;
   context?: Record<string, unknown> | null;
 }): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   await supabase.from("campaign_errors").insert({
     campaign_id: args.campaignId,
     enrol_id: args.enrolId ?? null,
@@ -426,7 +426,7 @@ export async function advanceEnrolment(
   enrolId: string,
   totalSteps: number
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data: enrol } = await supabase
     .from("campaign_enrolments")
     .select("current_step, status")

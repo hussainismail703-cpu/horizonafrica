@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   Classification,
   RejectionReason,
@@ -244,7 +244,7 @@ export async function classifyResponse(
   }
 
   // 5. Store in campaign_classifications
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   // We need an interaction_id. If not provided, we need to find or create one.
   let interactionIdLocal = interactionId;
@@ -327,7 +327,7 @@ export async function getLatestClassification(
   phoneNumber: string,
   campaignId: string
 ): Promise<CampaignClassification | null> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data } = await supabase
     .from("campaign_classifications")
     .select("*")
