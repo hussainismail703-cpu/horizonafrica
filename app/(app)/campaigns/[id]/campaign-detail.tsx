@@ -226,6 +226,7 @@ export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetai
 
   return (
     <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-on-surface">{name}</h1>
       <div className="flex items-center justify-between">
         <Link
           href="/campaigns"
