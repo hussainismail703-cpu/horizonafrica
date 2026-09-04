@@ -139,6 +139,9 @@ export async function getDashboardOverview(
 
 /**
  * Per-campaign summary rows for the dashboard's active campaigns table.
+ *
+ * Uses batch queries instead of N+1 per-campaign loops so the dashboard
+ * stays fast even with many campaigns.
  */
 export async function getDashboardCampaignRows(
   supabase: SupabaseClient
@@ -149,25 +152,60 @@ export async function getDashboardCampaignRows(
     .select("id, name, status")
     .order("updated_at", { ascending: false });
 
-  if (error || !campaigns) return [];
+  if (error || !campaigns || campaigns.length === 0) return [];
 
-  const rows: CampaignSummaryRow[] = [];
+  const campaignIds = campaigns.map((c) => c.id);
 
-  for (const c of campaigns) {
-    const [enrolmentsRes, interactionsRes] = await Promise.all([
-      supabase
-        .from("campaign_enrolments")
-        .select("current_step, status")
-        .eq("campaign_id", c.id),
-      supabase
-        .from("campaign_interactions")
-        .select("phone_number")
-        .eq("campaign_id", c.id)
-        .eq("message_type", "inbound"),
-    ]);
+  // Batch fetch all enrolments and inbound interactions for ALL campaigns
+  const [allEnrolmentsRes, allInteractionsRes] = await Promise.all([
+    supabase
+      .from("campaign_enrolments")
+      .select("campaign_id, current_step, status")
+      .in("campaign_id", campaignIds),
+    supabase
+      .from("campaign_interactions")
+      .select("campaign_id, phone_number")
+      .in("campaign_id", campaignIds)
+      .eq("message_type", "inbound"),
+  ]);
 
-    const enrolments = enrolmentsRes.data ?? [];
-    const inboundPhones = (interactionsRes.data ?? []).map((i) => i.phone_number);
+  const allEnrolments = allEnrolmentsRes.data ?? [];
+  const allInteractions = allInteractionsRes.data ?? [];
+
+  // Collect all unique phone numbers across all campaigns for a single
+  // converted-leads query.
+  const allInboundPhones = Array.from(
+    new Set(allInteractions.map((i) => i.phone_number).filter(Boolean))
+  );
+
+  let convertedPhones = new Set<string>();
+  if (allInboundPhones.length > 0) {
+    const { data: convertedLeads } = await supabase
+      .from("leads")
+      .select("phone_number")
+      .in("phone_number", allInboundPhones)
+      .eq("status", "converted");
+    convertedPhones = new Set((convertedLeads ?? []).map((l) => l.phone_number));
+  }
+
+  // Group enrolments and interactions by campaign_id
+  const enrolmentsByCampaign = new Map<string, { current_step: number; status: string }[]>();
+  for (const e of allEnrolments) {
+    const arr = enrolmentsByCampaign.get(e.campaign_id) ?? [];
+    arr.push({ current_step: e.current_step, status: e.status });
+    enrolmentsByCampaign.set(e.campaign_id, arr);
+  }
+
+  const interactionsByCampaign = new Map<string, string[]>();
+  for (const i of allInteractions) {
+    const arr = interactionsByCampaign.get(i.campaign_id) ?? [];
+    arr.push(i.phone_number);
+    interactionsByCampaign.set(i.campaign_id, arr);
+  }
+
+  const rows: CampaignSummaryRow[] = campaigns.map((c) => {
+    const enrolments = enrolmentsByCampaign.get(c.id) ?? [];
+    const inboundPhones = interactionsByCampaign.get(c.id) ?? [];
 
     // Step distribution
     const stepMap = new Map<number, number>();
@@ -181,17 +219,9 @@ export async function getDashboardCampaignRows(
     // Conversions: leads whose phone appears in this campaign's inbound
     // interactions AND whose lead status is 'converted'.
     const uniquePhones = Array.from(new Set(inboundPhones));
-    let conversions = 0;
-    if (uniquePhones.length > 0) {
-      const { count } = await supabase
-        .from("leads")
-        .select("id", { count: "exact", head: true })
-        .in("phone_number", uniquePhones)
-        .eq("status", "converted");
-      conversions = count ?? 0;
-    }
+    const conversions = uniquePhones.filter((p) => convertedPhones.has(p)).length;
 
-    rows.push({
+    return {
       id: c.id,
       name: c.name,
       status: c.status,
@@ -199,8 +229,8 @@ export async function getDashboardCampaignRows(
       stepDistribution,
       responses: uniquePhones.length,
       conversions,
-    });
-  }
+    };
+  });
 
   // Active campaigns first, then by total enrolled desc.
   rows.sort((a, b) => {
