@@ -29,6 +29,7 @@ interface Template {
   name: string;
   label: string;
   status: string;
+  description?: string | null;
 }
 
 const STATUS_OPTIONS: CampaignStatus[] = [
@@ -363,64 +364,85 @@ export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetai
           </p>
         ) : (
           <div className="space-y-3">
-            {steps.map((step, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col gap-3 rounded-lg border border-surface-variant bg-surface-container-low p-4 sm:flex-row sm:items-center"
-              >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                  {step.step_number}
-                </div>
-                <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-[120px_1fr]">
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-                      Delay (days)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={step.delay_days}
-                      onChange={(e) =>
-                        updateStep(idx, {
-                          delay_days: Math.max(0, Number(e.target.value) || 0),
-                        })
-                      }
-                      className="w-full rounded-lg border border-surface-variant bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-                      WhatsApp Template
-                    </label>
-                    <select
-                      value={step.template_name}
-                      onChange={(e) =>
-                        updateStep(idx, { template_name: e.target.value })
-                      }
-                      disabled={templatesLoading}
-                      className="w-full rounded-lg border border-surface-variant bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
-                    >
-                      {templatesLoading && <option value="">Loading templates…</option>}
-                      {!templatesLoading && templates.length === 0 && (
-                        <option value="">No templates available</option>
-                      )}
-                      {templates.map((t) => (
-                        <option key={t.name} value={t.name}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeStep(idx)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-lg text-on-surface-variant transition-colors hover:bg-error-container/30 hover:text-error sm:self-center"
-                  aria-label="Remove step"
+            {steps.map((step, idx) => {
+              // Calculate the send day: Step 1 with delay 0 = Day 1;
+              // subsequent steps add their delay to the cumulative day count.
+              const sendDay =
+                idx === 0
+                  ? step.delay_days + 1
+                  : steps
+                      .slice(0, idx + 1)
+                      .reduce((sum, s) => sum + s.delay_days, 0) + 1;
+              const selectedTemplate = templates.find(
+                (t) => t.name === step.template_name
+              );
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col gap-3 rounded-lg border border-surface-variant bg-surface-container-low p-4 sm:flex-row sm:items-center"
                 >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    {step.step_number}
+                  </div>
+                  <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-[120px_1fr]">
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                        Delay (days)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={step.delay_days}
+                        onChange={(e) =>
+                          updateStep(idx, {
+                            delay_days: Math.max(0, Number(e.target.value) || 0),
+                          })
+                        }
+                        className="w-full rounded-lg border border-surface-variant bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                      />
+                      <p className="mt-1 text-[10px] font-medium text-primary">
+                        Sends on Day {sendDay}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                        WhatsApp Template
+                      </label>
+                      <select
+                        value={step.template_name}
+                        onChange={(e) =>
+                          updateStep(idx, { template_name: e.target.value })
+                        }
+                        disabled={templatesLoading}
+                        className="w-full rounded-lg border border-surface-variant bg-surface px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                      >
+                        {templatesLoading && <option value="">Loading templates…</option>}
+                        {!templatesLoading && templates.length === 0 && (
+                          <option value="">No templates available</option>
+                        )}
+                        {templates.map((t) => (
+                          <option key={t.name} value={t.name}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedTemplate?.description && (
+                        <p className="mt-1 text-[10px] leading-relaxed text-on-surface-variant">
+                          {selectedTemplate.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeStep(idx)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-lg text-on-surface-variant transition-colors hover:bg-error-container/30 hover:text-error sm:self-center"
+                    aria-label="Remove step"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
             <div className="flex justify-end pt-2">
               <button
                 onClick={saveSteps}

@@ -36,13 +36,11 @@ interface KeywordRule {
 }
 
 const KEYWORD_RULES: KeywordRule[] = [
-  // Not interested
+  // Specific objections FIRST — so a message like "Not interested, price is
+  // too high" captures the rejection_reason instead of matching the generic
+  // "not interested" rule and losing the reason.
   {
-    patterns: /not interested|don'?t need|no thanks|not now|no longer interested|not interested/i,
-    classification: "not_interested",
-  },
-  {
-    patterns: /too expensive|too pricey|can'?t afford|out of my budget|costs too much|too much money/i,
+    patterns: /too expensive|too pricey|can'?t afford|out of my budget|costs too much|too much money|price is too high|too high|too costly/i,
     classification: "not_interested",
     rejection_reason: "price",
   },
@@ -56,6 +54,11 @@ const KEYWORD_RULES: KeywordRule[] = [
     classification: "already_has_service",
     rejection_reason: "competitor",
   },
+  // Not interested — generic (after specific objections so reasons are captured)
+  {
+    patterns: /not interested|don'?t need|no thanks|not now|no longer interested|not interested/i,
+    classification: "not_interested",
+  },
   // Callback requested — wants to speak to a consultant (distinct from "interested/ready to proceed")
   {
     patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|please call me|i'?d like to speak|want to speak to a consultant|consultant to call/i,
@@ -65,9 +68,11 @@ const KEYWORD_RULES: KeywordRule[] = [
     patterns: /^2\b/i, // numbered menu response "2 – I'd like to speak to a consultant"
     classification: "callback_requested",
   },
-  // Interested — explicit purchase intent / ready to proceed
+  // Interested — explicit purchase intent / ready to proceed.
+  // "fibre" is included standalone because the telkom_reengagement template
+  // asks customers to reply "FIBRE" to signal interest.
   {
-    patterns: /^(yes|interested|i want fibre|let'?s do it|sign me up|i'?m in)\b/i,
+    patterns: /^(yes|interested|i want fibre|fibre|let'?s do it|sign me up|i'?m in)\b/i,
     classification: "interested",
   },
   {
