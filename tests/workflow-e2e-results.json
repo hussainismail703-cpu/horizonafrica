@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-09-04T14:15:57.331Z",
+  "timestamp": "2026-09-04T14:25:29.430Z",
   "tester": {
     "email": "hussainismail703@gmail.com",
     "phone": "27832763116"
   },
-  "mode": "full-run",
+  "mode": "verify-n8n",
   "summary": {
-    "passed": 67,
+    "passed": 68,
     "failed": 0,
-    "warnings": 3,
-    "pendingN8n": 3
+    "warnings": 5,
+    "pendingN8n": 0
   },
   "results": [
     {
@@ -223,28 +223,22 @@
       "detail": "no new outbound after re-activation (sent=0)"
     },
     {
-      "test": "Setup lead follow-up state",
+      "test": "Lead follow_up_sent = true",
       "status": "PASS",
       "phase": "Phase 4: Layla Follow-Up Sender",
-      "detail": "follow_up_requested=true, due 5min ago, follow_up_sent=false"
+      "detail": "sent_at=2026-09-04T14:22:16.221+00:00"
     },
     {
-      "test": "Layla Follow-Up Sender execution",
-      "status": "PENDING_N8N",
+      "test": "horizon_followup_v6 delivery",
+      "status": "WARN",
       "phase": "Phase 4: Layla Follow-Up Sender",
-      "detail": "Execute n8n workflow Jz1na3ZFwZG1V0Vq (Jz1na3ZFwZG1V0Vq) via MCP execute_workflow, then re-run with --verify-n8n"
+      "detail": "Verify WhatsApp message received on tester phone 0832763116"
     },
     {
-      "test": "Setup missed-message conversation",
+      "test": "Missed message ai_response generated",
       "status": "PASS",
       "phase": "Phase 5: Missed Message Recovery",
-      "detail": "id=508, ai_response=NULL"
-    },
-    {
-      "test": "Missed Message Recovery execution",
-      "status": "PENDING_N8N",
-      "phase": "Phase 5: Missed Message Recovery",
-      "detail": "Execute n8n workflow PvCdg60gkRYVxYOf (PvCdg60gkRYVxYOf) via MCP execute_workflow, then re-run with --verify-n8n"
+      "detail": "response length=46"
     },
     {
       "test": "Error alert webhook accepted by n8n",
@@ -259,10 +253,16 @@
       "detail": "Brevo email alert is external — verify inbox at hussainismail703@gmail.com"
     },
     {
-      "test": "Webhook Health Monitor execution",
-      "status": "PENDING_N8N",
+      "test": "Health monitor workflow executed",
+      "status": "PASS",
       "phase": "Phase 6: Error Alerting & Health Monitoring",
-      "detail": "Execute n8n workflow ytA7xBbvP6ubsY12 (ytA7xBbvP6ubsY12) via MCP execute_workflow, then re-run with --verify-n8n"
+      "detail": "Verify execution status via n8n MCP get_execution (status should be 'success')"
+    },
+    {
+      "test": "Health monitor result",
+      "status": "WARN",
+      "phase": "Phase 6: Error Alerting & Health Monitoring",
+      "detail": "Workflow checks Supabase timestamps + Meta phone health — manual review of execution output recommended"
     },
     {
       "test": "Templates API returns 200",
@@ -452,21 +452,5 @@
     }
   ],
   "bugs": [],
-  "n8nPending": [
-    {
-      "test": "Layla Follow-Up Sender execution",
-      "detail": "Execute n8n workflow Jz1na3ZFwZG1V0Vq (Jz1na3ZFwZG1V0Vq) via MCP execute_workflow, then re-run with --verify-n8n",
-      "phase": "Phase 4: Layla Follow-Up Sender"
-    },
-    {
-      "test": "Missed Message Recovery execution",
-      "detail": "Execute n8n workflow PvCdg60gkRYVxYOf (PvCdg60gkRYVxYOf) via MCP execute_workflow, then re-run with --verify-n8n",
-      "phase": "Phase 5: Missed Message Recovery"
-    },
-    {
-      "test": "Webhook Health Monitor execution",
-      "detail": "Execute n8n workflow ytA7xBbvP6ubsY12 (ytA7xBbvP6ubsY12) via MCP execute_workflow, then re-run with --verify-n8n",
-      "phase": "Phase 6: Error Alerting & Health Monitoring"
-    }
-  ]
+  "n8nPending": []
 }
