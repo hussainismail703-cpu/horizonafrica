@@ -1,0 +1,321 @@
+{
+  "timestamp": "2026-09-04T15:31:43.128Z",
+  "tester": {
+    "phone": "27832763116",
+    "email": "hussainismail703@gmail.com"
+  },
+  "campaign": {
+    "id": "febe1cac-cf87-46c3-bbc7-160d3b96e28e",
+    "name": "Fibre Lead Re-Engagement"
+  },
+  "skip_real_messages": false,
+  "summary": {
+    "passed": 46,
+    "failed": 0,
+    "warnings": 2,
+    "total": 48
+  },
+  "bugs": [],
+  "warnings": [
+    {
+      "step": "Step 2: Live Message Dispatch — Step 1 (Initial Fibre Offer)",
+      "test": "Step 1 physical delivery",
+      "detail": "Auto-confirm enabled — Meta API returned sent status; physical receipt requires manual verification"
+    },
+    {
+      "step": "Step 4: Step 2 Follow-Up Dispatch (Non-Responder Path)",
+      "test": "Step 2 physical delivery",
+      "detail": "Auto-confirm enabled — Meta API returned sent status; physical receipt requires manual verification"
+    }
+  ],
+  "results": [
+    {
+      "step": "Step 1: Pre-Test Setup & Lead Profile Initialisation",
+      "test": "Campaign sequence configuration matches plan",
+      "status": "PASS",
+      "detail": "Step 1: telkom_fibre_packages (delay 0), Step 2: telkom_reengagement (delay 2)"
+    },
+    {
+      "step": "Step 1: Pre-Test Setup & Lead Profile Initialisation",
+      "test": "Test enrolment created/reset",
+      "status": "PASS",
+      "detail": "id=ed1af0ac-9037-4116-9bfb-e15a08e1ae99, phone=27832763116"
+    },
+    {
+      "step": "Step 1: Pre-Test Setup & Lead Profile Initialisation",
+      "test": "Lead profile initialised",
+      "status": "PASS",
+      "detail": "Hussain Ismail <hussainismail703@gmail.com>"
+    },
+    {
+      "step": "Step 1: Pre-Test Setup & Lead Profile Initialisation",
+      "test": "Campaign status set to active",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 2: Live Message Dispatch — Step 1 (Initial Fibre Offer)",
+      "test": "Process endpoint Step 1 send",
+      "status": "PASS",
+      "detail": "processed=1, sent=1, failed=0"
+    },
+    {
+      "step": "Step 2: Live Message Dispatch — Step 1 (Initial Fibre Offer)",
+      "test": "Enrolment advanced to step 1",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 2: Live Message Dispatch — Step 1 (Initial Fibre Offer)",
+      "test": "Outbound interaction logged for Step 1",
+      "status": "PASS",
+      "detail": "template=telkom_fibre_packages, status=sent"
+    },
+    {
+      "step": "Step 2: Live Message Dispatch — Step 1 (Initial Fibre Offer)",
+      "test": "Step 1 physical delivery",
+      "status": "WARN",
+      "detail": "Auto-confirm enabled — Meta API returned sent status; physical receipt requires manual verification"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path A: 'FIBRE': Webhook accepted",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path A: 'FIBRE': Enrolment status = interested",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path A: 'FIBRE': Inbound interaction recorded",
+      "status": "PASS",
+      "detail": "body=FIBRE"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path A: 'FIBRE': Classification = interested",
+      "status": "PASS",
+      "detail": "confidence=0.85, method=ai"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path A: 'FIBRE': Calling queue entry created",
+      "status": "PASS",
+      "detail": "status=pending, stage=INTERESTED"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path B: '2 - I'd like to speak to a consultant': Webhook accepted",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path B: '2 - I'd like to speak to a consultant': Enrolment status = callback_requested",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path B: '2 - I'd like to speak to a consultant': Inbound interaction recorded",
+      "status": "PASS",
+      "detail": "body=2 - I'd like to speak to a consultant"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path B: '2 - I'd like to speak to a consultant': Classification = callback_requested",
+      "status": "PASS",
+      "detail": "confidence=0.85, method=ai"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path B: '2 - I'd like to speak to a consultant': Calling queue entry created",
+      "status": "PASS",
+      "detail": "status=pending, stage=CALLBACK REQUESTED"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': Webhook accepted",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': Enrolment status = not_interested",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': Inbound interaction recorded",
+      "status": "PASS",
+      "detail": "body=4 - Not interested, price is too high"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': Classification = not_interested",
+      "status": "PASS",
+      "detail": "confidence=0.85, method=ai"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': Rejection reason = price",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path C: '4 - Not interested, price is too high': No calling queue entry (as expected)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': Webhook accepted",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': Enrolment status = opted_out",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': Inbound interaction recorded",
+      "status": "PASS",
+      "detail": "body=STOP"
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': No classification created for STOP (correct)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': No calling queue entry (as expected)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 3: Response Handling & Automated Classification",
+      "test": "Path D: 'STOP': Opt-out list entry created",
+      "status": "PASS",
+      "detail": "reason=STOP keyword"
+    },
+    {
+      "step": "Step 4: Step 2 Follow-Up Dispatch (Non-Responder Path)",
+      "test": "Process endpoint Step 2 send",
+      "status": "PASS",
+      "detail": "processed=1, sent=1, failed=0"
+    },
+    {
+      "step": "Step 4: Step 2 Follow-Up Dispatch (Non-Responder Path)",
+      "test": "Enrolment advanced to step 2",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 4: Step 2 Follow-Up Dispatch (Non-Responder Path)",
+      "test": "Outbound interaction logged for Step 2",
+      "status": "PASS",
+      "detail": "template=telkom_reengagement, status=sent"
+    },
+    {
+      "step": "Step 4: Step 2 Follow-Up Dispatch (Non-Responder Path)",
+      "test": "Step 2 physical delivery",
+      "status": "WARN",
+      "detail": "Auto-confirm enabled — Meta API returned sent status; physical receipt requires manual verification"
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Calling queue entry exists",
+      "status": "PASS",
+      "detail": "id=dac02c27-d66c-45de-940f-bf096dfea665, status=pending, stage=INTERESTED"
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Calling queue PATCH to called",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Calling queue status updated to called",
+      "status": "PASS",
+      "detail": "call_notes=Spoke with customer, interested in 50Mbps package, requested callback Friday 2pm"
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Calling queue PATCH to converted",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Calling queue converted status confirmed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 5: Calling Queue Sales Workflow",
+      "test": "Lead status updated to converted",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Campaign stats API reachable",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Funnel metrics present",
+      "status": "PASS",
+      "detail": "{\"enrolled\":1,\"responses\":3,\"engaged\":0,\"interested\":2,\"callingQueue\":2,\"converted\":1}"
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Funnel: enrolled >= 1",
+      "status": "PASS",
+      "detail": 1
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Funnel: responses >= 1",
+      "status": "PASS",
+      "detail": 3
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Funnel: interested >= 1",
+      "status": "PASS",
+      "detail": 2
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Funnel: callingQueue >= 1",
+      "status": "PASS",
+      "detail": 2
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Classification breakdown includes interested",
+      "status": "PASS",
+      "detail": "count=2"
+    },
+    {
+      "step": "Step 6: Campaign Performance Reporting & Funnel Verification",
+      "test": "Error log shows 0 engine errors",
+      "status": "PASS",
+      "detail": "errorCount=0"
+    }
+  ]
+}
