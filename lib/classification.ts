@@ -343,13 +343,21 @@ export async function classifyResponse(
       updated_at: new Date().toISOString(),
     };
 
-    // Set rejection reason if classified as not_interested or already_has_service
     if (
       result.classification === "not_interested" ||
       result.classification === "already_has_service"
     ) {
+      // Rejection — mark lead as lost with rejection reason
       leadUpdate.status = "lost";
       leadUpdate.rejection_reason = result.rejection_reason ?? null;
+    } else if (
+      result.classification === "interested" ||
+      result.classification === "callback_requested"
+    ) {
+      // Sales-qualified — clear any stale rejection reason from a previous
+      // rejection and advance the lead status so it reflects renewed interest
+      leadUpdate.rejection_reason = null;
+      leadUpdate.status = "qualified";
     }
 
     await supabase
