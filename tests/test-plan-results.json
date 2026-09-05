@@ -1,0 +1,493 @@
+{
+  "timestamp": "2026-09-04T13:15:15.712Z",
+  "baseUrl": "http://localhost:3000",
+  "testEmail": "Hussainismail703@gmail.com",
+  "testPhone": "27832763116",
+  "summary": {
+    "total": 68,
+    "pass": 54,
+    "fail": 0,
+    "warn": 14,
+    "security": 0
+  },
+  "moduleSummary": {
+    "M1 Authentication & Navigation": {
+      "pass": 8,
+      "fail": 0,
+      "security": 0,
+      "warn": 0
+    },
+    "M2 Core CRM & Management Features": {
+      "pass": 9,
+      "fail": 0,
+      "security": 0,
+      "warn": 0
+    },
+    "M3 Campaign Engine & Sequence Builder": {
+      "pass": 9,
+      "fail": 0,
+      "security": 0,
+      "warn": 1
+    },
+    "M4 Contact Enrolment & Manual Controls": {
+      "pass": 9,
+      "fail": 0,
+      "security": 0,
+      "warn": 0
+    },
+    "M5 Campaign Dispatch Engine & Scheduling": {
+      "pass": 3,
+      "fail": 0,
+      "security": 0,
+      "warn": 1
+    },
+    "M6 Webhook Processing, Intent Detection & Classification": {
+      "pass": 2,
+      "fail": 0,
+      "security": 0,
+      "warn": 10
+    },
+    "M7 Fibre Re-Engagement Extension & Calling Queue": {
+      "pass": 7,
+      "fail": 0,
+      "security": 0,
+      "warn": 2
+    },
+    "M8 Analytics, Funnel Reporting & Monitoring": {
+      "pass": 7,
+      "fail": 0,
+      "security": 0,
+      "warn": 0
+    }
+  },
+  "bugs": [],
+  "securityIssues": [],
+  "consoleErrors": [
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/leads\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n                <LeadsPage>\n                  <div className=\"space-y-6\">\n                    <div>\n                    <LeadTable leads={[...]}>\n                      <div className=\"space-y-5\">\n                        <div>\n                        <div className=\"card-shado...\">\n                          <table className=\"w-full tex...\">\n                            <thead>\n                            <tbody>\n                              <tr onClick={function onClick} className=\"cursor-poi...\">\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td className=\"px-5 py-3.5 text-on-surface-variant\">\n+                                 03/09/2026\n-                                 9/3/2026\n                              ...\n                        ...\n                ...\n",
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/conversat...\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n                <ConversationsPage>\n                  <div className=\"space-y-6\">\n                    <div>\n                    <ConversationView conversations={[...]}>\n                      <div className=\"flex h-[ca...\">\n                        <div className=\"flex w-ful...\">\n                          <div>\n                          <div className=\"flex-1 spa...\">\n                            <button onClick={function onClick} className=\"w-full rou...\">\n                              <div>\n                              <p>\n                              <p className=\"mt-1 text-...\">\n+                               03/09/2026\n-                               9/3/2026\n                            ...\n                        ...\n                ...\n",
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <LoadingBoundary loading={null}>\n      <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n        <RedirectBoundary>\n          <RedirectErrorBoundary router={{...}}>\n            <InnerLayoutRouter url=\"/broadcasts\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n              <BroadcastsPage>\n                <div className=\"space-y-6\">\n                  <div>\n                  <div>\n                  <div>\n                  <div className=\"card-shado...\">\n                    <h2>\n                    <BroadcastHistoryList history={[...]}>\n                      <div>\n                        <div className=\"overflow-x...\">\n                          <table className=\"w-full tex...\">\n                            <thead>\n                            <tbody>\n                              <tr className=\"border-b b...\">\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td className=\"py-3 text-on-surface-variant\">\n+                                 31/08/2026\n-                                 8/31/2026\n                              ...\n              ...\n",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/leads\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n                <LeadsPage>\n                  <div className=\"space-y-6\">\n                    <div>\n                    <LeadTable leads={[...]}>\n                      <div className=\"space-y-5\">\n                        <div>\n                        <div className=\"card-shado...\">\n                          <table className=\"w-full tex...\">\n                            <thead>\n                            <tbody>\n                              <tr onClick={function onClick} className=\"cursor-poi...\">\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td className=\"px-5 py-3.5 text-on-surface-variant\">\n+                                 03/09/2026\n-                                 9/3/2026\n                              ...\n                        ...\n                ...\n",
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/conversat...\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n                <ConversationsPage>\n                  <div className=\"space-y-6\">\n                    <div>\n                    <ConversationView conversations={[...]}>\n                      <div className=\"flex h-[ca...\">\n                        <div className=\"flex w-ful...\">\n                          <div>\n                          <div className=\"flex-1 spa...\">\n                            <button onClick={function onClick} className=\"w-full rou...\">\n                              <div>\n                              <p>\n                              <p className=\"mt-1 text-...\">\n+                               03/09/2026\n-                               9/3/2026\n                            ...\n                        ...\n                ...\n",
+    "PAGE ERROR: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <LoadingBoundary loading={null}>\n      <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n        <RedirectBoundary>\n          <RedirectErrorBoundary router={{...}}>\n            <InnerLayoutRouter url=\"/broadcasts\" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>\n              <BroadcastsPage>\n                <div className=\"space-y-6\">\n                  <div>\n                  <div>\n                  <div>\n                  <div className=\"card-shado...\">\n                    <h2>\n                    <BroadcastHistoryList history={[...]}>\n                      <div>\n                        <div className=\"overflow-x...\">\n                          <table className=\"w-full tex...\">\n                            <thead>\n                            <tbody>\n                              <tr className=\"border-b b...\">\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td>\n                                <td className=\"py-3 text-on-surface-variant\">\n+                                 31/08/2026\n-                                 8/31/2026\n                              ...\n              ...\n",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  ],
+  "results": [
+    {
+      "test": "1.1a Login form renders email + password fields",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.1b Route guard redirects /campaigns -> /login",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.1b Route guard redirects /leads -> /login",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.1b Route guard redirects /calling-queue -> /login",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.1c Login with valid credentials succeeds",
+      "status": "PASS",
+      "detail": "http://localhost:3000/dashboard",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.2 All 12 sidebar links navigate without 404",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.3a Session persists across page refresh",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "1.3b Signout redirects to /login",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M1 Authentication & Navigation"
+    },
+    {
+      "test": "2.1a Leads page renders with table/heading",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.1b Lead search/filter input accepts text",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.2 Conversations page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.3 Broadcasts page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.4 Products page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.5 Follow-ups page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.6a /api/health returns healthy status",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.6b /health page renders",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "2.6c /settings page renders",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M2 Core CRM & Management Features"
+    },
+    {
+      "test": "3.1a Submit disabled when name empty",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.1b Draft campaign created & redirected to detail",
+      "status": "PASS",
+      "detail": "06311e05-d820-4db5-ae67-0b0fb6057dc7",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.2a 'Add Step' button opens step form",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.2b Template dropdown present",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.2c Template dropdown options",
+      "status": "WARN",
+      "note": "Only 1 option(s) — META_WABA_ID may be missing",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.2d Delay-days input present",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.2e Save sequence button clicked",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.3a Activate campaign clicked via UI",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.3b Pause campaign clicked via UI",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "3.3c Stop campaign clicked via UI",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M3 Campaign Engine & Sequence Builder"
+    },
+    {
+      "test": "4.1a Manual phone enrolment submitted via API",
+      "status": "PASS",
+      "detail": "enrolled=1",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.1b Enrolment persisted in DB",
+      "status": "PASS",
+      "detail": "id=8cfb98f5 status=active",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.1c Duplicate active enrolment prevented",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.2a Override enrolment status active->responded",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.2b Classification correction not_interested->interested",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.2c Remove (soft-delete) enrolment",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.3a Customer journey page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.3b Audit trail page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "4.3c Audit entries logged for overrides (3)",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M4 Contact Enrolment & Manual Controls"
+    },
+    {
+      "test": "5.1a Process endpoint requires auth",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M5 Campaign Dispatch Engine & Scheduling"
+    },
+    {
+      "test": "5.1b Process endpoint runs with valid APP_SECRET",
+      "status": "PASS",
+      "detail": "processed=1 sent=1 advanced=1",
+      "_module": "M5 Campaign Dispatch Engine & Scheduling"
+    },
+    {
+      "test": "5.1c Interaction logging",
+      "status": "WARN",
+      "note": "No outbound interactions found",
+      "_module": "M5 Campaign Dispatch Engine & Scheduling"
+    },
+    {
+      "test": "5.2a Non-responder marked no_response_final + nurture_flag",
+      "status": "PASS",
+      "detail": "step=2",
+      "_module": "M5 Campaign Dispatch Engine & Scheduling"
+    },
+    {
+      "test": "6.1a Webhook proxy accepts inbound payload",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.1b Enrolment responded",
+      "status": "WARN",
+      "note": "status=no_response_final",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"FIBRE\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"Yes\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"1\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"Interested\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"2\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected callback_requested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"Please call me\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected callback_requested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"4\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected not_interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"No thank you\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected not_interested",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2 keyword \"STOP\"",
+      "status": "WARN",
+      "note": "status=404 got undefined expected opted_out",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "6.2a Keyword classification: 0/9 correct",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M6 Webhook Processing, Intent Detection & Classification"
+    },
+    {
+      "test": "7.1a opt_out_list",
+      "status": "WARN",
+      "note": "No row found (table may use different normalization)",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.1b Enrolment opted_out",
+      "status": "WARN",
+      "note": "status=no_response_final",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.1c Process endpoint skips opted-out (no error)",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.2a Calling Queue page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.2b Manual lead added to calling queue",
+      "status": "PASS",
+      "detail": "queue_status=pending",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.2c pending->called with notes",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.2d called->converted with notes",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.2e Call notes persisted",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "7.3a Expired campaign closed",
+      "status": "PASS",
+      "detail": "status=completed",
+      "_module": "M7 Fibre Re-Engagement Extension & Calling Queue"
+    },
+    {
+      "test": "8.1a Campaign dashboard page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.1b Dashboard stat cards present (6)",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.2a Campaign report page loads",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.2b Sales Funnel visualization present",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.2c Classification/Final Outcome breakdown present",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.2d Rate metrics present (6)",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    },
+    {
+      "test": "8.2e Error log / failed messages section present",
+      "status": "PASS",
+      "detail": "",
+      "_module": "M8 Analytics, Funnel Reporting & Monitoring"
+    }
+  ]
+}

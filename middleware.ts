@@ -18,7 +18,13 @@ export async function middleware(request: NextRequest) {
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              httpOnly: true,
+              sameSite: "lax",
+              secure: process.env.NODE_ENV === "production",
+              path: "/",
+            })
           );
         },
       },
@@ -33,9 +39,14 @@ export async function middleware(request: NextRequest) {
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/forgot-password" ||
-    pathname === "/reset-password";
+    pathname === "/reset-password" ||
+    pathname === "/auth/login" ||
+    pathname === "/auth/signout";
   const isPublicApi =
-    pathname === "/api/whatsapp-webhook";
+    pathname === "/api/whatsapp-webhook" ||
+    pathname === "/api/campaigns/process" ||
+    pathname === "/api/campaigns/classify" ||
+    pathname === "/api/health";
 
   if (!user && !isAuthPage && !isPublicApi) {
     const url = request.nextUrl.clone();

@@ -1,0 +1,456 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Shared campaign statistics helpers.
+ *
+ * Used by both the API routes (`/api/campaigns/dashboard-stats`,
+ * `/api/campaigns/stats/[id]`) and the server-rendered dashboard/report
+ * pages so the metric logic stays in one place.
+ */
+
+export interface DashboardOverview {
+  totalActiveCampaigns: number;
+  totalEnrolledCustomers: number;
+  messagesSentToday: number;
+  responsesToday: number;
+}
+
+export interface CampaignSummaryRow {
+  id: string;
+  name: string;
+  status: string;
+  totalEnrolled: number;
+  stepDistribution: { step: number; count: number }[];
+  responses: number;
+  conversions: number;
+}
+
+export interface CampaignStats {
+  campaignId: string;
+  campaignName: string;
+  status: string;
+  messagesSent: number;
+  deliveredCount: number;
+  deliveryRate: number | null; // 0-100, null when no outbound messages
+  readCount: number;
+  readRate: number | null; // 0-100, null when no delivered messages
+  responses: number;
+  responseRate: number | null; // 0-100, null when no outbound messages
+  enteredSalesFlow: number;
+  converted: number;
+  totalEnrolled: number;
+  activeEnrolled: number;
+  completedEnrolled: number;
+  respondedEnrolled: number;
+  removedEnrolled: number;
+  // Funnel metrics (Fibre Re-Engagement extension)
+  engagedCount: number; // needs_information classification (engagement signal)
+  interestedCount: number; // interested classification (sales-qualified)
+  callbackRequestedCount: number; // callback_requested classification
+  callingQueueCount: number; // total items in calling_queue for this campaign
+  callingQueuePending: number;
+  callingQueueConverted: number;
+  notInterestedCount: number;
+  optedOutCount: number;
+  noResponseFinalCount: number;
+  classificationBreakdown: { classification: string; count: number; percentage: number | null }[];
+  finalOutcomeBreakdown: { outcome: string; count: number }[];
+  statusCounts: Record<string, number>;
+  failedMessages: number;
+  failedInteractions: {
+    id: string;
+    phone_number: string;
+    step_number: number | null;
+    template_name: string | null;
+    meta_error: string | null;
+    occurred_at: string;
+  }[];
+  recentErrors: {
+    id: string;
+    error_type: string;
+    error_message: string | null;
+    phone_number: string | null;
+    context: Record<string, unknown> | null;
+    created_at: string;
+  }[];
+  stepBreakdown: {
+    step: number;
+    sent: number;
+    delivered: number;
+    responses: number;
+  }[];
+  recentInteractions: {
+    id: string;
+    phone_number: string;
+    message_type: string;
+    template_name: string | null;
+    delivery_status: string;
+    occurred_at: string;
+  }[];
+}
+
+function startOfTodayUTC(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+}
+
+function pct(numerator: number, denominator: number): number | null {
+  if (denominator === 0) return null;
+  return Math.round((numerator / denominator) * 1000) / 10;
+}
+
+/**
+ * Aggregate overview numbers shown on the campaign dashboard.
+ */
+export async function getDashboardOverview(
+  supabase: SupabaseClient
+): Promise<DashboardOverview> {
+  const today = startOfTodayUTC();
+
+  const [activeCampaigns, activeEnrolments, outboundToday, inboundToday] =
+    await Promise.all([
+      supabase
+        .from("campaigns")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active"),
+      supabase
+        .from("campaign_enrolments")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active"),
+      supabase
+        .from("campaign_interactions")
+        .select("id", { count: "exact", head: true })
+        .eq("message_type", "outbound")
+        .gte("occurred_at", today),
+      supabase
+        .from("campaign_interactions")
+        .select("id", { count: "exact", head: true })
+        .eq("message_type", "inbound")
+        .gte("occurred_at", today),
+    ]);
+
+  return {
+    totalActiveCampaigns: activeCampaigns.count ?? 0,
+    totalEnrolledCustomers: activeEnrolments.count ?? 0,
+    messagesSentToday: outboundToday.count ?? 0,
+    responsesToday: inboundToday.count ?? 0,
+  };
+}
+
+/**
+ * Per-campaign summary rows for the dashboard's active campaigns table.
+ *
+ * Uses batch queries instead of N+1 per-campaign loops so the dashboard
+ * stays fast even with many campaigns.
+ */
+export async function getDashboardCampaignRows(
+  supabase: SupabaseClient
+): Promise<CampaignSummaryRow[]> {
+  // Pull all campaigns (we'll surface active ones first but show others too).
+  const { data: campaigns, error } = await supabase
+    .from("campaigns")
+    .select("id, name, status")
+    .order("updated_at", { ascending: false });
+
+  if (error || !campaigns || campaigns.length === 0) return [];
+
+  const campaignIds = campaigns.map((c) => c.id);
+
+  // Batch fetch all enrolments and inbound interactions for ALL campaigns
+  const [allEnrolmentsRes, allInteractionsRes] = await Promise.all([
+    supabase
+      .from("campaign_enrolments")
+      .select("campaign_id, current_step, status")
+      .in("campaign_id", campaignIds),
+    supabase
+      .from("campaign_interactions")
+      .select("campaign_id, phone_number")
+      .in("campaign_id", campaignIds)
+      .eq("message_type", "inbound"),
+  ]);
+
+  const allEnrolments = allEnrolmentsRes.data ?? [];
+  const allInteractions = allInteractionsRes.data ?? [];
+
+  // Collect all unique phone numbers across all campaigns for a single
+  // converted-leads query.
+  const allInboundPhones = Array.from(
+    new Set(allInteractions.map((i) => i.phone_number).filter(Boolean))
+  );
+
+  let convertedPhones = new Set<string>();
+  if (allInboundPhones.length > 0) {
+    const { data: convertedLeads } = await supabase
+      .from("leads")
+      .select("phone_number")
+      .in("phone_number", allInboundPhones)
+      .eq("status", "converted");
+    convertedPhones = new Set((convertedLeads ?? []).map((l) => l.phone_number));
+  }
+
+  // Group enrolments and interactions by campaign_id
+  const enrolmentsByCampaign = new Map<string, { current_step: number; status: string }[]>();
+  for (const e of allEnrolments) {
+    const arr = enrolmentsByCampaign.get(e.campaign_id) ?? [];
+    arr.push({ current_step: e.current_step, status: e.status });
+    enrolmentsByCampaign.set(e.campaign_id, arr);
+  }
+
+  const interactionsByCampaign = new Map<string, string[]>();
+  for (const i of allInteractions) {
+    const arr = interactionsByCampaign.get(i.campaign_id) ?? [];
+    arr.push(i.phone_number);
+    interactionsByCampaign.set(i.campaign_id, arr);
+  }
+
+  const rows: CampaignSummaryRow[] = campaigns.map((c) => {
+    const enrolments = enrolmentsByCampaign.get(c.id) ?? [];
+    const inboundPhones = interactionsByCampaign.get(c.id) ?? [];
+
+    // Step distribution
+    const stepMap = new Map<number, number>();
+    for (const e of enrolments) {
+      stepMap.set(e.current_step, (stepMap.get(e.current_step) ?? 0) + 1);
+    }
+    const stepDistribution = Array.from(stepMap.entries())
+      .map(([step, count]) => ({ step, count }))
+      .sort((a, b) => a.step - b.step);
+
+    // Conversions: leads whose phone appears in this campaign's inbound
+    // interactions AND whose lead status is 'converted'.
+    const uniquePhones = Array.from(new Set(inboundPhones));
+    const conversions = uniquePhones.filter((p) => convertedPhones.has(p)).length;
+
+    return {
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      totalEnrolled: enrolments.length,
+      stepDistribution,
+      responses: uniquePhones.length,
+      conversions,
+    };
+  });
+
+  // Active campaigns first, then by total enrolled desc.
+  rows.sort((a, b) => {
+    if (a.status === "active" && b.status !== "active") return -1;
+    if (a.status !== "active" && b.status === "active") return 1;
+    return b.totalEnrolled - a.totalEnrolled;
+  });
+
+  return rows;
+}
+
+/**
+ * Detailed stats for a single campaign — used by the performance report.
+ */
+export async function getCampaignStats(
+  supabase: SupabaseClient,
+  campaignId: string
+): Promise<CampaignStats | null> {
+  const { data: campaign, error } = await supabase
+    .from("campaigns")
+    .select("id, name, status")
+    .eq("id", campaignId)
+    .single();
+
+  if (error || !campaign) return null;
+
+  const [enrolmentsRes, interactionsRes, classificationsRes, recentRes, errorsRes, queueRes] =
+    await Promise.all([
+      supabase
+        .from("campaign_enrolments")
+        .select("current_step, status, final_outcome")
+        .eq("campaign_id", campaignId),
+      supabase
+        .from("campaign_interactions")
+        .select("id, phone_number, step_number, message_type, template_name, delivery_status, meta_error, occurred_at")
+        .eq("campaign_id", campaignId)
+        .order("occurred_at", { ascending: true }),
+      supabase
+        .from("campaign_classifications")
+        .select("phone_number, classification")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("campaign_interactions")
+        .select("id, phone_number, message_type, template_name, delivery_status, occurred_at")
+        .eq("campaign_id", campaignId)
+        .order("occurred_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("campaign_errors")
+        .select("id, error_type, error_message, phone_number, context, created_at")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("calling_queue")
+        .select("queue_status")
+        .eq("campaign_id", campaignId),
+    ]);
+
+  const enrolments = enrolmentsRes.data ?? [];
+  const interactions = interactionsRes.data ?? [];
+  const classifications = classificationsRes.data ?? [];
+  const recentInteractions = recentRes.data ?? [];
+  const recentErrors = errorsRes.data ?? [];
+  const queueItems = queueRes.data ?? [];
+
+  const outbound = interactions.filter((i) => i.message_type === "outbound");
+  const inbound = interactions.filter((i) => i.message_type === "inbound");
+  const delivered = outbound.filter(
+    (i) => i.delivery_status === "delivered" || i.delivery_status === "read"
+  ).length;
+  const readCount = outbound.filter((i) => i.delivery_status === "read").length;
+  const failed = outbound.filter((i) => i.delivery_status === "failed").length;
+
+  // Entered sales flow = classification interested OR needs_information
+  // (dedupe by phone number — one per customer).
+  const salesFlowPhones = new Set<string>();
+  for (const c of classifications) {
+    if (c.classification === "interested" || c.classification === "needs_information") {
+      salesFlowPhones.add(c.phone_number);
+    }
+  }
+
+  // Conversions: leads whose phone appears in this campaign's inbound
+  // interactions AND whose lead status is 'converted'.
+  const inboundPhones = Array.from(new Set(inbound.map((i) => i.phone_number)));
+  let converted = 0;
+  if (inboundPhones.length > 0) {
+    const { count } = await supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .in("phone_number", inboundPhones)
+      .eq("status", "converted");
+    converted = count ?? 0;
+  }
+
+  // Step breakdown
+  const stepMap = new Map<
+    number,
+    { sent: number; delivered: number; responses: number }
+  >();
+  for (const i of interactions) {
+    const step = i.step_number ?? 0;
+    if (!stepMap.has(step)) {
+      stepMap.set(step, { sent: 0, delivered: 0, responses: 0 });
+    }
+    const entry = stepMap.get(step)!;
+    if (i.message_type === "outbound") {
+      entry.sent += 1;
+      if (i.delivery_status === "delivered" || i.delivery_status === "read") {
+        entry.delivered += 1;
+      }
+    } else {
+      entry.responses += 1;
+    }
+  }
+  const stepBreakdown = Array.from(stepMap.entries())
+    .map(([step, v]) => ({ step, ...v }))
+    .sort((a, b) => a.step - b.step);
+
+  // Enrolment status counts — include all statuses (new + legacy)
+  const ALL_STATUSES = [
+    "active", "responded", "completed", "removed",
+    "interested", "callback_requested", "not_interested",
+    "opted_out", "no_response_final", "other_invalid",
+  ];
+  const statusCounts: Record<string, number> = {};
+  for (const s of ALL_STATUSES) statusCounts[s] = 0;
+  for (const e of enrolments) {
+    if (e.status in statusCounts) {
+      statusCounts[e.status] += 1;
+    }
+  }
+
+  // Classification breakdown (count + percentage per classification)
+  const classCountMap = new Map<string, number>();
+  for (const c of classifications) {
+    classCountMap.set(c.classification, (classCountMap.get(c.classification) ?? 0) + 1);
+  }
+  const totalClassifications = classifications.length;
+  const classificationBreakdown = Array.from(classCountMap.entries())
+    .map(([classification, count]) => ({
+      classification,
+      count,
+      percentage: pct(count, totalClassifications),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Final outcome breakdown (count per final_outcome label)
+  const outcomeMap = new Map<string, number>();
+  for (const e of enrolments) {
+    if (e.final_outcome) {
+      outcomeMap.set(e.final_outcome, (outcomeMap.get(e.final_outcome) ?? 0) + 1);
+    }
+  }
+  const finalOutcomeBreakdown = Array.from(outcomeMap.entries())
+    .map(([outcome, count]) => ({ outcome, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Funnel metrics from classifications
+  const engagedCount = classifications.filter((c) => c.classification === "needs_information").length;
+  const interestedCount = classifications.filter((c) => c.classification === "interested").length;
+  const callbackRequestedCount = classifications.filter((c) => c.classification === "callback_requested").length;
+  const notInterestedClassCount = classifications.filter(
+    (c) => c.classification === "not_interested" || c.classification === "already_has_service"
+  ).length;
+
+  // Calling queue metrics
+  const callingQueueCount = queueItems.length;
+  const callingQueuePending = queueItems.filter((q) => q.queue_status === "pending").length;
+  const callingQueueConverted = queueItems.filter((q) => q.queue_status === "converted").length;
+
+  // Failed interactions (with error detail)
+  const failedInteractions = interactions
+    .filter((i) => i.message_type === "outbound" && i.delivery_status === "failed")
+    .map((i) => ({
+      id: i.id,
+      phone_number: i.phone_number,
+      step_number: i.step_number,
+      template_name: i.template_name,
+      meta_error: i.meta_error,
+      occurred_at: i.occurred_at,
+    }))
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+
+  return {
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    status: campaign.status,
+    messagesSent: outbound.length,
+    deliveredCount: delivered,
+    deliveryRate: pct(delivered, outbound.length),
+    readCount,
+    readRate: pct(readCount, delivered),
+    responses: inbound.length,
+    responseRate: pct(inbound.length, outbound.length),
+    enteredSalesFlow: salesFlowPhones.size,
+    converted,
+    totalEnrolled: enrolments.length,
+    activeEnrolled: statusCounts.active,
+    completedEnrolled: statusCounts.completed,
+    respondedEnrolled: statusCounts.responded,
+    removedEnrolled: statusCounts.removed,
+    // Funnel metrics
+    engagedCount,
+    interestedCount,
+    callbackRequestedCount,
+    callingQueueCount,
+    callingQueuePending,
+    callingQueueConverted,
+    notInterestedCount: notInterestedClassCount,
+    optedOutCount: statusCounts.opted_out,
+    noResponseFinalCount: statusCounts.no_response_final,
+    classificationBreakdown,
+    finalOutcomeBreakdown,
+    statusCounts,
+    failedMessages: failed,
+    failedInteractions,
+    recentErrors,
+    stepBreakdown,
+    recentInteractions,
+  };
+}

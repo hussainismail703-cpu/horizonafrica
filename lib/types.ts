@@ -23,6 +23,9 @@ export interface Lead {
   follow_up_sent_at: string | null;
   offered_package: string | null;
   needs_escalation: boolean | null;
+  last_campaign_contact_date: string | null;
+  last_campaign_response: string | null;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -92,4 +95,175 @@ export interface StaffAlert {
   email_sent: boolean;
   email_sent_at: string | null;
   created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Campaign Engine types (Phase 1)
+// ---------------------------------------------------------------------------
+
+export type CampaignStatus = "draft" | "active" | "paused" | "completed" | "stopped";
+
+export type EnrolmentStatus =
+  | "active"
+  | "responded"
+  | "completed"
+  | "removed"
+  | "interested"
+  | "callback_requested"
+  | "not_interested"
+  | "opted_out"
+  | "no_response_final"
+  | "other_invalid";
+
+export type InteractionType = "outbound" | "inbound";
+
+export type DeliveryStatus = "pending" | "sent" | "delivered" | "read" | "failed";
+
+export type Classification =
+  | "interested"
+  | "not_interested"
+  | "already_has_service"
+  | "needs_information"
+  | "no_response"
+  | "other"
+  | "uncertain"
+  | "callback_requested";
+
+export type RejectionReason =
+  | "price"
+  | "already_has_service"
+  | "not_needed"
+  | "not_now"
+  | "needs_more_info"
+  | "competitor"
+  | "not_eligible"
+  | "other";
+
+export type ClassifiedBy = "ai" | "manual";
+
+export interface Campaign {
+  id: string;
+  name: string;
+  objective: string | null;
+  status: CampaignStatus;
+  start_date: string | null;
+  end_date: string | null;
+  group_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CampaignStep {
+  id: string;
+  campaign_id: string;
+  step_number: number;
+  delay_days: number;
+  template_name: string;
+  template_parameters?: Array<{
+    component: string;
+    source: "custom" | "contact_name";
+    value?: string;
+  }> | null;
+  created_at: string;
+}
+
+export interface CampaignEnrolment {
+  id: string;
+  campaign_id: string;
+  phone_number: string;
+  lead_id: number | null;
+  current_step: number;
+  status: EnrolmentStatus;
+  final_outcome: string | null;
+  nurture_flag: boolean;
+  enrolled_at: string;
+  updated_at: string;
+}
+
+export interface CampaignInteraction {
+  id: string;
+  campaign_id: string;
+  enrol_id: string | null;
+  phone_number: string;
+  step_number: number | null;
+  message_type: InteractionType;
+  template_name: string | null;
+  message_body: string | null;
+  delivery_status: DeliveryStatus;
+  meta_message_id: string | null;
+  meta_error: string | null;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface CampaignClassification {
+  id: string;
+  interaction_id: string;
+  phone_number: string;
+  classification: Classification;
+  rejection_reason: RejectionReason | null;
+  confidence: number | null;
+  classified_by: ClassifiedBy;
+  original_ai_classification: Classification | null;
+  corrected_by: string | null;
+  corrected_at: string | null;
+  created_at: string;
+}
+
+export interface CampaignAuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  field_changed: string;
+  old_value: string | null;
+  new_value: string | null;
+  changed_by: string;
+  changed_at: string;
+}
+
+export interface CampaignError {
+  id: string;
+  campaign_id: string | null;
+  enrol_id: string | null;
+  phone_number: string | null;
+  error_type: string;
+  error_message: string | null;
+  context: Record<string, unknown> | null;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Calling Queue + Opt-out types (Fibre Re-Engagement extension)
+// ---------------------------------------------------------------------------
+
+export type QueueStatus = "pending" | "called" | "converted" | "lost" | "callback_scheduled";
+
+export interface CallingQueueItem {
+  id: string;
+  campaign_id: string | null;
+  enrolment_id: string | null;
+  phone_number: string;
+  lead_id: number | null;
+  full_name: string | null;
+  email: string | null;
+  preferred_package: string | null;
+  customer_request: string | null;
+  preferred_callback_time: string | null;
+  campaign_source: string | null;
+  campaign_stage: string | null;
+  final_outcome: string | null;
+  queue_status: QueueStatus;
+  called_at: string | null;
+  called_by: string | null;
+  call_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OptOutEntry {
+  id: string;
+  phone_number: string;
+  reason: string | null;
+  source_campaign_id: string | null;
+  opted_out_at: string;
 }

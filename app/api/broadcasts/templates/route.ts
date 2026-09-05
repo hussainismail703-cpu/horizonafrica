@@ -36,14 +36,38 @@ const LABEL_MAP: Record<string, string> = {
   horizon_promo_v1: "Horizon Promo",
   horizon_service_update_v1: "Service Update",
   telkom_prepaid_offer: "Telkom Prepaid Offer",
-  telkom_reengagement: "Telkom Re-engagement",
-  telkom_fibre_packages: "Telkom Fibre Packages",
+  telkom_reengagement: "Telkom Re-engagement — Final Follow-up (Day 3)",
+  telkom_fibre_packages: "Telkom Fibre Packages — Initial Offer (Day 1)",
   telkom_payment_instructions_v2: "Telkom Payment Instructions",
   telkom_deposit_required_v2: "Telkom Deposit Required",
   telkom_credit_approved_v2: "Telkom Credit Approved",
   telkom_consultant_call_v2: "Telkom Consultant Call",
   telkom_app_confirmation_v2: "Telkom App Confirmation",
   telkom_credit_declined: "Telkom Credit Declined",
+};
+
+// Descriptions shown in the UI to help users understand what each template
+// is for and when it should be sent in a campaign sequence.
+const DESCRIPTION_MAP: Record<string, string> = {
+  telkom_fibre_packages:
+    "Day 1 — Initial re-engagement message with Telkom Fibre package pricing and a call-to-action to reply 'FIBRE'.",
+  telkom_reengagement:
+    "Day 3 — Final follow-up for non-responders. Offers reply options: 1 (more info), 2 (consultant callback), 3 (interested), 4 (not interested), STOP (opt out).",
+  telkom_prepaid_offer:
+    "Telkom prepaid package offer message.",
+  telkom_payment_instructions_v2:
+    "Payment instructions for approved Telkom orders.",
+  telkom_deposit_required_v2:
+    "Deposit required notification for Telkom orders.",
+  telkom_credit_approved_v2:
+    "Credit approval notification for Telkom applications.",
+  telkom_consultant_call_v2:
+    "Consultant call scheduling message.",
+  telkom_app_confirmation_v2:
+    "Application confirmation message for Telkom orders.",
+  telkom_credit_declined:
+    "Credit declined notification for Telkom applications.",
+  hello_world: "Meta default test template — use only for testing.",
 };
 
 function formatLabel(name: string): string {
@@ -129,6 +153,7 @@ export async function GET() {
         language: t.language,
         parameters: extractParameters(t.components),
         body_text: getBodyText(t.components),
+        description: DESCRIPTION_MAP[t.name] ?? null,
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
