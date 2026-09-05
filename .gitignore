@@ -8,6 +8,7 @@ out/
 # env files
 .env.local
 .env.production
+env-for-hussain.env.local
 
 # misc
 .DS_Store
@@ -27,3 +28,7 @@ horizon env.txt
 # n8n workflow backup copies (the canonical workflow JSON is tracked)
 *-backup-*.json
 workflow-inbound-ai-v2-backup-*.json
+
+# test artifacts
+tests/screenshots/
+tests/test-results.json

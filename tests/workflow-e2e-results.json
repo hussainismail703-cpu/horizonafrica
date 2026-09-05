@@ -1,0 +1,456 @@
+{
+  "timestamp": "2026-09-04T14:25:29.430Z",
+  "tester": {
+    "email": "hussainismail703@gmail.com",
+    "phone": "27832763116"
+  },
+  "mode": "verify-n8n",
+  "summary": {
+    "passed": 68,
+    "failed": 0,
+    "warnings": 5,
+    "pendingN8n": 0
+  },
+  "results": [
+    {
+      "test": "Valid verify token returns challenge",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "status=200, body=\"1158201444\""
+    },
+    {
+      "test": "Invalid verify token returns 403",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "status=403"
+    },
+    {
+      "test": "Webhook proxy forwards sales query to n8n",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "status=200"
+    },
+    {
+      "test": "n8n Inbound AI workflow started",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "message=\"Workflow was started\""
+    },
+    {
+      "test": "Lead exists for test phone",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "id=816, email=hussainismail703@gmail.com"
+    },
+    {
+      "test": "Hot-lead message forwarded to n8n",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "status=200"
+    },
+    {
+      "test": "Hot-lead email alert",
+      "status": "WARN",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "Brevo email alert is an external side effect — verify inbox manually if needed"
+    },
+    {
+      "test": "Escalation message forwarded to n8n",
+      "status": "PASS",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "status=200"
+    },
+    {
+      "test": "Chatwoot handover",
+      "status": "WARN",
+      "phase": "Phase 1: Inbound Webhook & AI Lead Qualification",
+      "detail": "Handover payload is prepared inside n8n — verify Chatwoot inbox manually if needed"
+    },
+    {
+      "test": "Missing auth token → 401",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "status=401"
+    },
+    {
+      "test": "Wrong auth token → 401",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "status=401"
+    },
+    {
+      "test": "Valid token → 200 with summary",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "{\"processed\":0,\"sent\":0,\"failed\":0,\"advanced\":0,\"errors\":[]}"
+    },
+    {
+      "test": "Process endpoint triggered for Step 1",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "sent=1, failed=0"
+    },
+    {
+      "test": "Enrolment advanced to step 1",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "current_step=1"
+    },
+    {
+      "test": "Outbound interaction logged with meta_message_id",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "id=wamid.HBgLMjc4MzI3NjMxMT…"
+    },
+    {
+      "test": "Process endpoint triggered for Step 2",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "sent=1"
+    },
+    {
+      "test": "Enrolment advanced to step 2",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "current_step=2"
+    },
+    {
+      "test": "Process endpoint triggered for expired campaign",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "processed=2"
+    },
+    {
+      "test": "Expired campaign status → completed",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "status=completed"
+    },
+    {
+      "test": "Unresponded enrolment → no_response_final + nurture_flag",
+      "status": "PASS",
+      "phase": "Phase 2: Campaign Sequence Engine & Template Dispatch",
+      "detail": "status=no_response_final, nurture=true"
+    },
+    {
+      "test": "Interested webhook accepted",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=200"
+    },
+    {
+      "test": "Enrolment marked responded/interested",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=interested"
+    },
+    {
+      "test": "Auto-classified as interested",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "confidence=0.85, method=ai"
+    },
+    {
+      "test": "Lead inserted into calling_queue (pending)",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "stage=INTERESTED"
+    },
+    {
+      "test": "Callback webhook accepted",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=200"
+    },
+    {
+      "test": "Auto-classified as callback_requested",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "confidence=0.85"
+    },
+    {
+      "test": "Callback lead in calling_queue with callback note",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "stage=CALLBACK REQUESTED"
+    },
+    {
+      "test": "Not-interested webhook accepted",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=200"
+    },
+    {
+      "test": "Auto-classified as not_interested",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "rejection_reason=price"
+    },
+    {
+      "test": "Rejection reason recorded as price",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "reason=price"
+    },
+    {
+      "test": "Enrolment status → not_interested",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=not_interested"
+    },
+    {
+      "test": "STOP webhook accepted",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=200"
+    },
+    {
+      "test": "Phone added to opt_out_list",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "reason=STOP keyword"
+    },
+    {
+      "test": "Enrolment status → opted_out",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "status=opted_out"
+    },
+    {
+      "test": "Opted-out phone skipped by process endpoint",
+      "status": "PASS",
+      "phase": "Phase 3: Response Detection, Classification & Calling Queue",
+      "detail": "no new outbound after re-activation (sent=0)"
+    },
+    {
+      "test": "Lead follow_up_sent = true",
+      "status": "PASS",
+      "phase": "Phase 4: Layla Follow-Up Sender",
+      "detail": "sent_at=2026-09-04T14:22:16.221+00:00"
+    },
+    {
+      "test": "horizon_followup_v6 delivery",
+      "status": "WARN",
+      "phase": "Phase 4: Layla Follow-Up Sender",
+      "detail": "Verify WhatsApp message received on tester phone 0832763116"
+    },
+    {
+      "test": "Missed message ai_response generated",
+      "status": "PASS",
+      "phase": "Phase 5: Missed Message Recovery",
+      "detail": "response length=46"
+    },
+    {
+      "test": "Error alert webhook accepted by n8n",
+      "status": "PASS",
+      "phase": "Phase 6: Error Alerting & Health Monitoring",
+      "detail": "status=200"
+    },
+    {
+      "test": "Error notification email",
+      "status": "WARN",
+      "phase": "Phase 6: Error Alerting & Health Monitoring",
+      "detail": "Brevo email alert is external — verify inbox at hussainismail703@gmail.com"
+    },
+    {
+      "test": "Health monitor workflow executed",
+      "status": "PASS",
+      "phase": "Phase 6: Error Alerting & Health Monitoring",
+      "detail": "Verify execution status via n8n MCP get_execution (status should be 'success')"
+    },
+    {
+      "test": "Health monitor result",
+      "status": "WARN",
+      "phase": "Phase 6: Error Alerting & Health Monitoring",
+      "detail": "Workflow checks Supabase timestamps + Meta phone health — manual review of execution output recommended"
+    },
+    {
+      "test": "Templates API returns 200",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "26 templates fetched"
+    },
+    {
+      "test": "Template \"telkom_fibre_packages\" present",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "status=approved, category=MARKETING"
+    },
+    {
+      "test": "Template \"telkom_reengagement\" present",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "status=approved, category=MARKETING"
+    },
+    {
+      "test": "Template \"horizon_followup_v6\" present",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "status=approved, category=MARKETING"
+    },
+    {
+      "test": "Template \"hello_world\" present",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "status=approved, category=UTILITY"
+    },
+    {
+      "test": "Template \"telkom_consultant_call_v2\" present",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "status=approved, category=UTILITY"
+    },
+    {
+      "test": "Template \"follow_up_reminder\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_followup_v6\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_followup_reminder\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_followup_v1\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_followup_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_followup_v3\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"horizon_followup_v4\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"horizon_promo_v1\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "5 param(s): Header Param 1, Body Param 1, Body Param 2, Body Param 3, Body Param 4"
+    },
+    {
+      "test": "Template \"horizon_service_update_v1\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "3 param(s): Body Param 1, Body Param 2, Body Param 3"
+    },
+    {
+      "test": "Template \"telkom_app_confirmation_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_app_confirmation\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_consultant_call_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_consultant_call\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_credit_approved_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_credit_approved\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_deposit_required_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"telkom_deposit_required\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "2 param(s): Body Param 1, Body Param 2"
+    },
+    {
+      "test": "Template \"telkom_fibre_packages\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "4 param(s): Body Param 1, Body Param 2, Body Param 3, Body Param 4"
+    },
+    {
+      "test": "Template \"telkom_payment_instructions_v2\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_payment_instructions\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_prepaid_offer\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "Template \"telkom_reengagement\" has parsed parameters",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "1 param(s): Body Param 1"
+    },
+    {
+      "test": "horizon_followup_v6 has {{1}} contact-name parameter",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "params=2"
+    },
+    {
+      "test": "telkom_consultant_call_v2 has {{1}}",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "positions=1"
+    },
+    {
+      "test": "Campaign engine component builder schema",
+      "status": "PASS",
+      "phase": "Phase 7: Template Compatibility & Parameters",
+      "detail": "lib/campaign-engine.ts builds { type, parameters: [{ type:'text', text }] } — matches Meta API"
+    }
+  ],
+  "bugs": [],
+  "n8nPending": []
+}
