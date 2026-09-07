@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processCampaigns } from "@/lib/campaign-engine";
 
-// POST /api/campaigns/process
-// Triggered by Vercel Cron or n8n. Requires Authorization: Bearer <APP_SECRET>.
-export async function POST(req: NextRequest) {
+// /api/campaigns/process
+// Triggered by n8n (POST) or Vercel Cron (GET, if re-enabled on Pro plan).
+// Requires Authorization: Bearer <APP_SECRET> (or Bearer <CRON_SECRET> if set).
+async function handle(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  const expected = process.env.APP_SECRET;
+  const appSecret = process.env.APP_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
 
-  if (!expected) {
+  if (!appSecret && !cronSecret) {
     return NextResponse.json(
       { error: "APP_SECRET env var is not configured" },
       { status: 500 }
     );
   }
 
-  if (authHeader !== `Bearer ${expected}`) {
+  const isAuth =
+    (appSecret && authHeader === `Bearer ${appSecret}`) ||
+    (cronSecret && authHeader === `Bearer ${cronSecret}`);
+
+  if (!isAuth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,4 +33,12 @@ export async function POST(req: NextRequest) {
     advanced: result.enrolments_advanced,
     errors: result.errors,
   });
+}
+
+export async function GET(req: NextRequest) {
+  return handle(req);
+}
+
+export async function POST(req: NextRequest) {
+  return handle(req);
 }
