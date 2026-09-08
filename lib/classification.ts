@@ -59,9 +59,11 @@ const KEYWORD_RULES: KeywordRule[] = [
     patterns: /not interested|don'?t need|no thanks|not now|no longer interested|not interested/i,
     classification: "not_interested",
   },
-  // Callback requested — wants to speak to a consultant (distinct from "interested/ready to proceed")
+  // Callback requested — wants to speak to a consultant at a later time
+  // (distinct from "interested/ready to proceed"). Per the campaign doc,
+  // "Please call me" is classified as interested, not callback.
   {
-    patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|please call me|i'?d like to speak|want to speak to a consultant|consultant to call/i,
+    patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|i'?d like to speak|want to speak to a consultant|consultant to call/i,
     classification: "callback_requested",
   },
   {
@@ -76,18 +78,17 @@ const KEYWORD_RULES: KeywordRule[] = [
     classification: "interested",
   },
   {
-    patterns: /i want to apply|how do i apply|send someone|i want the package|please contact me|contact me to apply/i,
+    patterns: /i want to apply|how do i apply|send someone|i want the package|please contact me|contact me to apply|please call me|can someone contact me|someone contact me/i,
     classification: "interested",
   },
   {
     patterns: /^3\b/i, // numbered menu response "3 – I'm interested, please contact me"
     classification: "interested",
   },
-  {
-    patterns: /i'?ll take|i want the|r425 package|50 mbps package|25 mbps package|40 mbps package|i want that package/i,
-    classification: "interested",
-  },
-  // Needs information — engagement, not sales-qualified
+  // Needs information — engagement, not sales-qualified.
+  // Checked BEFORE package-selection rules so that a question like
+  // "How much is the 50 Mbps package?" classifies as needs_information
+  // (asking about price) rather than interested (mentions a package).
   {
     patterns: /how much|what'?s the price|what does it cost|pricing|tell me more|more info|more information|send details|what packages|what speeds|is fibre available|coverage/i,
     classification: "needs_information",
@@ -95,6 +96,11 @@ const KEYWORD_RULES: KeywordRule[] = [
   {
     patterns: /^1\b/i, // numbered menu response "1 – I'd like more information"
     classification: "needs_information",
+  },
+  // Interested — package selection (explicit intent to take a specific package)
+  {
+    patterns: /i'?ll take|i want the|r425 package|50 mbps package|25 mbps package|40 mbps package|i want that package/i,
+    classification: "interested",
   },
   // Not interested — numbered menu response "4"
   {

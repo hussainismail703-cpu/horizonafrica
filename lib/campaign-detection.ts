@@ -23,12 +23,14 @@ export async function detectAndMarkCampaignResponse(
   const supabase = createServiceClient();
   const phone = phoneNumber.replace(/\D/g, "");
 
-  // Find any active enrolment for this phone number
+  // Find any active or no_response_final enrolment for this phone number.
+  // Including no_response_final allows late responses (after the cron grace
+  // period) to still be detected, classified, and routed to the calling queue.
   const { data: enrolment } = await supabase
     .from("campaign_enrolments")
-    .select("id, campaign_id, phone_number")
+    .select("id, campaign_id, phone_number, status")
     .eq("phone_number", phone)
-    .eq("status", "active")
+    .in("status", ["active", "no_response_final"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .single();
@@ -80,10 +82,16 @@ export async function detectAndMarkCampaignResponse(
     };
   }
 
-  // Normal response — mark as 'responded' to stop further campaign messages
+  // Normal response — mark as 'responded' to stop further campaign messages.
+  // If the enrolment was no_response_final (late response after grace period),
+  // clear nurture_flag and final_outcome since the customer did respond.
+  const wasNoResponseFinal = enrolment.status === "no_response_final";
   await supabase
     .from("campaign_enrolments")
-    .update({ status: "responded" })
+    .update({
+      status: "responded",
+      ...(wasNoResponseFinal && { nurture_flag: false, final_outcome: null }),
+    })
     .eq("id", enrolment.id);
 
   return {
