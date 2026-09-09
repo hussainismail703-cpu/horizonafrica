@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { normalizePhone } from "@/lib/phone-utils";
 import {
   Classification,
   RejectionReason,
@@ -398,7 +399,7 @@ export async function classifyResponse(
       await supabase.from("calling_queue").insert({
         campaign_id: campaignId,
         enrolment_id: enrolId,
-        phone_number: phoneNumber,
+        phone_number: normalizePhone(phoneNumber),
         lead_id: enrolment?.lead_id ?? null,
         full_name: leadData?.full_name ?? null,
         email: leadData?.email ?? null,

@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -210,8 +211,20 @@ export async function processCampaign(
     // current_step is 0-indexed: 0 means "about to send step 1"
     const stepIndex = enrol.current_step;
     if (stepIndex >= stepList.length) {
-      // Already past the last step — mark completed
-      await advanceEnrolment(enrol.id, stepList.length);
+      // Already past the last step. If still active (never responded),
+      // mark as no_response_final + nurture_flag. This fires on the cycle
+      // AFTER the last step was sent, giving the customer a grace period
+      // (one cron cycle) to respond to the final message.
+      if (enrol.status === "active") {
+        await supabase
+          .from("campaign_enrolments")
+          .update({
+            status: "no_response_final",
+            nurture_flag: true,
+            final_outcome: "NO RESPONSE – FINAL ATTEMPT",
+          })
+          .eq("id", enrol.id);
+      }
       result.enrolments_advanced++;
       continue;
     }
@@ -270,6 +283,33 @@ export async function processCampaign(
     }
   }
 
+  // Cleanup pass: mark "responded" enrolments past the last step as completed.
+  // The process loop above only handles status=active enrolments, so a
+  // "responded" enrolment (customer replied but wasn't sales-qualified) that
+  // has reached the end of the sequence would otherwise stay "responded"
+  // indefinitely. Per the campaign spec: "There must be no leads left
+  // indefinitely in an undefined status."
+  const { data: staleResponded } = await supabase
+    .from("campaign_enrolments")
+    .select("id")
+    .eq("campaign_id", campaignId)
+    .eq("status", "responded")
+    .gte("current_step", stepList.length);
+
+  if (staleResponded && staleResponded.length > 0) {
+    await supabase
+      .from("campaign_enrolments")
+      .update({
+        status: "completed",
+        final_outcome: "RESPONDED – COMPLETED",
+      })
+      .in(
+        "id",
+        staleResponded.map((e) => e.id)
+      );
+    result.enrolments_advanced += staleResponded.length;
+  }
+
   return result;
 }
 
@@ -294,7 +334,7 @@ export async function sendCampaignMessage(
     };
   }
 
-  const phone = phoneNumber.replace(/\D/g, "");
+  const phone = normalizePhone(phoneNumber);
 
   // Build template payload, optionally with components/parameters
   const template: Record<string, unknown> = {
@@ -511,15 +551,12 @@ export async function advanceEnrolment(
   const nextStep = enrol.current_step + 1;
   if (nextStep >= totalSteps) {
     if (enrol.status === "active") {
-      // Never responded — mark as no_response_final + nurture flag
+      // Just advance the step — no_response_final will be set on the next
+      // process cycle via the "past last step" check in processCampaign,
+      // giving the customer a grace period to respond to the final message.
       await supabase
         .from("campaign_enrolments")
-        .update({
-          current_step: nextStep,
-          status: "no_response_final",
-          nurture_flag: true,
-          final_outcome: "NO RESPONSE – FINAL ATTEMPT",
-        })
+        .update({ current_step: nextStep })
         .eq("id", enrolId);
     } else {
       // Responded but reached end of sequence — mark completed
