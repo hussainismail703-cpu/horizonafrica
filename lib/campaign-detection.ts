@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { normalizePhone } from "@/lib/phone-utils";
 
 interface EnrolmentDetection {
   enrolment_id: string;
@@ -21,7 +22,7 @@ export async function detectAndMarkCampaignResponse(
   messageBody: string | null
 ): Promise<EnrolmentDetection | null> {
   const supabase = createServiceClient();
-  const phone = phoneNumber.replace(/\D/g, "");
+  const phone = normalizePhone(phoneNumber);
 
   // Find any active or no_response_final enrolment for this phone number.
   // Including no_response_final allows late responses (after the cron grace
@@ -53,14 +54,17 @@ export async function detectAndMarkCampaignResponse(
   });
 
   if (isStop) {
-    // Mark enrolment as opted_out with final outcome label
+    // Mark ALL active/no_response_final enrolments for this phone as opted_out,
+    // not just the detected one. The customer requested to stop all marketing
+    // communication, so every active campaign enrolment should be closed.
     await supabase
       .from("campaign_enrolments")
       .update({
         status: "opted_out",
         final_outcome: "OPTED OUT",
       })
-      .eq("id", enrolment.id);
+      .eq("phone_number", phone)
+      .in("status", ["active", "no_response_final"]);
 
     // Add to global opt_out_list (upsert — phone is unique)
     await supabase
@@ -107,7 +111,7 @@ export async function detectAndMarkCampaignResponse(
  */
 export async function isOptedOut(phoneNumber: string): Promise<boolean> {
   const supabase = createServiceClient();
-  const phone = phoneNumber.replace(/\D/g, "");
+  const phone = normalizePhone(phoneNumber);
   const { data } = await supabase
     .from("opt_out_list")
     .select("id")
