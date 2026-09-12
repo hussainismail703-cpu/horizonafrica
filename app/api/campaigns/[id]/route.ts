@@ -124,3 +124,120 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+// DELETE /api/campaigns/[id] — delete a campaign and all related data
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid campaign ID format" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Verify the campaign exists
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!campaign) {
+    return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+  }
+
+  // Prevent deleting active campaigns
+  if (campaign.status === "active") {
+    return NextResponse.json(
+      { error: "Cannot delete an active campaign. Pause or stop it first." },
+      { status: 400 }
+    );
+  }
+
+  // Set current user for audit context
+  await supabase.rpc("set_config", {
+    config_name: "app.current_user",
+    config_value: user.email ?? "unknown",
+    is_local: true,
+  });
+
+  // Collect enrolment IDs for downstream cleanup
+  const { data: enrolments } = await supabase
+    .from("campaign_enrolments")
+    .select("id")
+    .eq("campaign_id", id);
+
+  const enrolmentIds = (enrolments ?? []).map((e) => e.id);
+
+  // Collect interaction IDs for classification cleanup
+  const { data: interactions } = await supabase
+    .from("campaign_interactions")
+    .select("id")
+    .eq("campaign_id", id);
+
+  const interactionIds = (interactions ?? []).map((i) => i.id);
+
+  // Delete child records in dependency order
+  // 1. Classifications (reference interactions)
+  if (interactionIds.length > 0) {
+    await supabase
+      .from("campaign_classifications")
+      .delete()
+      .in("interaction_id", interactionIds);
+  }
+
+  // 2. Calling queue entries (reference enrolments)
+  if (enrolmentIds.length > 0) {
+    await supabase
+      .from("calling_queue")
+      .delete()
+      .in("enrolment_id", enrolmentIds);
+  }
+
+  // 3. Campaign errors (reference campaign directly)
+  await supabase.from("campaign_errors").delete().eq("campaign_id", id);
+
+  // 4. Campaign interactions (reference campaign directly)
+  await supabase.from("campaign_interactions").delete().eq("campaign_id", id);
+
+  // 5. Campaign enrolments (reference campaign directly)
+  await supabase.from("campaign_enrolments").delete().eq("campaign_id", id);
+
+  // 6. Campaign steps (reference campaign directly)
+  await supabase.from("campaign_steps").delete().eq("campaign_id", id);
+
+  // 7. Audit log entries for this campaign
+  await supabase
+    .from("campaign_audit_log")
+    .delete()
+    .eq("entity_type", "campaign")
+    .eq("entity_id", id);
+
+  // Also delete audit log entries for the enrolments
+  if (enrolmentIds.length > 0) {
+    await supabase
+      .from("campaign_audit_log")
+      .delete()
+      .eq("entity_type", "enrolment")
+      .in("entity_id", enrolmentIds);
+  }
+
+  // 8. Finally, delete the campaign itself
+  const { error } = await supabase.from("campaigns").delete().eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: id });
+}
