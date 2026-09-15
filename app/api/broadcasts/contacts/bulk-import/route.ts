@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 interface ImportContact {
   contact_name: string | null;
@@ -35,11 +36,11 @@ export async function POST(request: NextRequest) {
   // Normalize phone numbers and validate
   const rows = contacts
     .map((c) => {
-      const phone = (c.phone_number || "").replace(/\D/g, "");
+      const phone = normalizePhone(c.phone_number || "");
       if (!phone || phone.length < 10) return null;
       return {
         contact_name: c.contact_name || null,
-        phone_number: c.phone_number.trim(),
+        phone_number: phone,
         group_id: Number(group_id),
         opt_in: true,
       };

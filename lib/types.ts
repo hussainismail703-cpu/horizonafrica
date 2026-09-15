@@ -22,6 +22,7 @@ export interface Lead {
   follow_up_sent: boolean | null;
   follow_up_sent_at: string | null;
   offered_package: string | null;
+  preferred_contact_number: string | null;
   needs_escalation: boolean | null;
   last_campaign_contact_date: string | null;
   last_campaign_response: string | null;

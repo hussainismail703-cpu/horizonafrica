@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_QUEUE_STATUSES = ["pending", "called", "converted", "lost", "callback_scheduled"];
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Request body must be a JSON object" }, { status: 400 });
   }
 
-  const phoneNumber = typeof body.phone_number === "string" ? body.phone_number.replace(/\D/g, "") : "";
+  const phoneNumber = typeof body.phone_number === "string" ? normalizePhone(body.phone_number) : "";
   if (!phoneNumber) {
     return NextResponse.json({ error: "phone_number is required" }, { status: 400 });
   }

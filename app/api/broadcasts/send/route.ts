@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
 
   // Send messages sequentially to avoid rate limits
   for (const recipient of recipients) {
-    const phone = recipient.phone_number.replace(/\D/g, "");
+    const phone = normalizePhone(recipient.phone_number);
 
     const template: Record<string, unknown> = {
       name: template_name,

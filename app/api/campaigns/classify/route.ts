@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { classifyResponse } from "@/lib/classification";
+import { normalizePhone } from "@/lib/phone-utils";
 
 // POST /api/campaigns/classify
 // Called by n8n or the webhook after an inbound message is received from a
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const phone = body.phone_number.replace(/\D/g, "");
+  const phone = normalizePhone(body.phone_number);
 
   // Look up enrolment if not provided
   let campaignId = body.campaign_id;
