@@ -182,7 +182,9 @@ export async function processCampaign(
     .from("opt_out_list")
     .select("phone_number");
 
-  const optedOutSet = new Set((optedOutPhones ?? []).map((o) => o.phone_number));
+  const optedOutSet = new Set(
+    (optedOutPhones ?? []).map((o) => normalizePhone(o.phone_number))
+  );
 
   const { data: enrolments, error: enrolErr } = await supabase
     .from("campaign_enrolments")
@@ -204,7 +206,7 @@ export async function processCampaign(
 
   for (const enrol of (enrolments ?? []) as EnrolmentRow[]) {
     // Skip opted-out phone numbers
-    if (optedOutSet.has(enrol.phone_number)) {
+    if (optedOutSet.has(normalizePhone(enrol.phone_number))) {
       continue;
     }
 

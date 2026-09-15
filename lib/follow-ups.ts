@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -64,7 +65,7 @@ export async function sendFollowUps(leadId?: number): Promise<FollowUpResult> {
 
   for (const lead of (leads ?? []) as FollowUpLead[]) {
     result.processed++;
-    const phone = lead.phone_number.replace(/\D/g, "");
+    const phone = normalizePhone(lead.phone_number);
     const name = lead.full_name ?? "there";
     const pkg = lead.offered_package ?? lead.product_interest ?? "fibre";
 
