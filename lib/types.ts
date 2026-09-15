@@ -22,6 +22,7 @@ export interface Lead {
   follow_up_sent: boolean | null;
   follow_up_sent_at: string | null;
   offered_package: string | null;
+  preferred_contact_number: string | null;
   needs_escalation: boolean | null;
   last_campaign_contact_date: string | null;
   last_campaign_response: string | null;
@@ -229,6 +230,17 @@ export interface CampaignError {
   error_type: string;
   error_message: string | null;
   context: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface MessageDeliveryFailure {
+  id: string;
+  message_id: string | null;
+  recipient_phone: string | null;
+  error_code: number | null;
+  error_title: string | null;
+  error_message: string | null;
+  raw_status: Record<string, unknown> | null;
   created_at: string;
 }
 

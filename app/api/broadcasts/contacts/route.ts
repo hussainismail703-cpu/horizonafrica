@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     .from("broadcast_contacts")
     .insert({
       contact_name: contact_name ?? null,
-      phone_number,
+      phone_number: normalizePhone(phone_number),
       group_id: Number(group_id),
       opt_in: true,
     })

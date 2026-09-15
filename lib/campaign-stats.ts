@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { normalizePhone } from "@/lib/phone-utils";
 
 /**
  * Shared campaign statistics helpers.
@@ -175,7 +176,12 @@ export async function getDashboardCampaignRows(
   // Collect all unique phone numbers across all campaigns for a single
   // converted-leads query.
   const allInboundPhones = Array.from(
-    new Set(allInteractions.map((i) => i.phone_number).filter(Boolean))
+    new Set(
+      allInteractions
+        .map((i) => i.phone_number)
+        .filter(Boolean)
+        .map((p) => normalizePhone(p))
+    )
   );
 
   let convertedPhones = new Set<string>();
@@ -183,9 +189,10 @@ export async function getDashboardCampaignRows(
     const { data: convertedLeads } = await supabase
       .from("leads")
       .select("phone_number")
-      .in("phone_number", allInboundPhones)
       .eq("status", "converted");
-    convertedPhones = new Set((convertedLeads ?? []).map((l) => l.phone_number));
+    convertedPhones = new Set(
+      (convertedLeads ?? []).map((l) => normalizePhone(l.phone_number))
+    );
   }
 
   // Group enrolments and interactions by campaign_id
@@ -218,7 +225,9 @@ export async function getDashboardCampaignRows(
 
     // Conversions: leads whose phone appears in this campaign's inbound
     // interactions AND whose lead status is 'converted'.
-    const uniquePhones = Array.from(new Set(inboundPhones));
+    const uniquePhones = Array.from(
+      new Set(inboundPhones.map((p) => normalizePhone(p)))
+    );
     const conversions = uniquePhones.filter((p) => convertedPhones.has(p)).length;
 
     return {
@@ -310,21 +319,25 @@ export async function getCampaignStats(
   const salesFlowPhones = new Set<string>();
   for (const c of classifications) {
     if (c.classification === "interested" || c.classification === "needs_information") {
-      salesFlowPhones.add(c.phone_number);
+      salesFlowPhones.add(normalizePhone(c.phone_number));
     }
   }
 
   // Conversions: leads whose phone appears in this campaign's inbound
   // interactions AND whose lead status is 'converted'.
-  const inboundPhones = Array.from(new Set(inbound.map((i) => i.phone_number)));
+  const inboundPhones = Array.from(
+    new Set(inbound.map((i) => normalizePhone(i.phone_number)))
+  );
   let converted = 0;
   if (inboundPhones.length > 0) {
-    const { count } = await supabase
+    const { data: convertedLeads } = await supabase
       .from("leads")
-      .select("id", { count: "exact", head: true })
-      .in("phone_number", inboundPhones)
+      .select("phone_number")
       .eq("status", "converted");
-    converted = count ?? 0;
+    const convertedSet = new Set(
+      (convertedLeads ?? []).map((l) => normalizePhone(l.phone_number))
+    );
+    converted = inboundPhones.filter((p) => convertedSet.has(p)).length;
   }
 
   // Step breakdown

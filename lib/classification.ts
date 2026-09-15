@@ -297,7 +297,7 @@ export async function classifyResponse(
   if (interactionIdLocal) {
     await supabase.from("campaign_classifications").insert({
       interaction_id: interactionIdLocal,
-      phone_number: phoneNumber,
+      phone_number: normalizePhone(phoneNumber),
       classification: result.classification,
       rejection_reason: result.rejection_reason ?? null,
       confidence: result.confidence,
@@ -427,7 +427,7 @@ export async function getLatestClassification(
   const { data } = await supabase
     .from("campaign_classifications")
     .select("*")
-    .eq("phone_number", phoneNumber)
+    .eq("phone_number", normalizePhone(phoneNumber))
     .order("created_at", { ascending: false })
     .limit(1)
     .single();

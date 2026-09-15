@@ -36,8 +36,8 @@ export function ConversationView({ conversations }: ConversationViewProps) {
       map.get(key)!.push(c);
     });
     return Array.from(map.entries()).sort((a, b) => {
-      const aLast = a[1][a[1].length - 1];
-      const bLast = b[1][b[1].length - 1];
+      const aLast = a[1][0];
+      const bLast = b[1][0];
       return new Date(bLast.created_at).getTime() - new Date(aLast.created_at).getTime();
     });
   }, [filtered]);
@@ -81,7 +81,7 @@ export function ConversationView({ conversations }: ConversationViewProps) {
         <div className="flex-1 space-y-1 overflow-y-auto p-2">
           {grouped.length > 0 ? (
             grouped.map(([phone, msgs]) => {
-              const last = msgs[msgs.length - 1];
+              const last = msgs[0];
               const isSelected = selectedPhone === phone;
               return (
                 <button

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { phoneSearchVariants } from "@/lib/phone-utils";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -26,7 +27,11 @@ export async function GET(request: NextRequest) {
     query = query.eq("status", status);
   }
   if (search) {
-    query = query.or(`full_name.ilike.%${search}%,phone_number.ilike.%${search}%`);
+    const ors = [`full_name.ilike.%${search}%`, `phone_number.ilike.%${search}%`];
+    for (const v of phoneSearchVariants(search)) {
+      ors.push(`phone_number.ilike.%${v}%`);
+    }
+    query = query.or(ors.join(","));
   }
 
   const { data, error } = await query;
