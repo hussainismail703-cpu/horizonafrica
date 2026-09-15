@@ -48,6 +48,7 @@ export async function GET() {
     title: string;
     description: string;
     leadId: number;
+    phone: string;
     timestamp: string;
   }> = [];
 
@@ -58,6 +59,7 @@ export async function GET() {
       title: "Hot Lead",
       description: `${lead.full_name ?? lead.phone_number} is ready to convert`,
       leadId: lead.id,
+      phone: lead.phone_number,
       timestamp: lead.created_at,
     });
   }
@@ -69,6 +71,7 @@ export async function GET() {
       title: "New Lead",
       description: `${lead.full_name ?? lead.phone_number} just came in`,
       leadId: lead.id,
+      phone: lead.phone_number,
       timestamp: lead.created_at,
     });
   }
@@ -80,6 +83,7 @@ export async function GET() {
       title: "Escalation Needed",
       description: `${lead.full_name ?? lead.phone_number} needs human assistance`,
       leadId: lead.id,
+      phone: lead.phone_number,
       timestamp: lead.updated_at,
     });
   }
@@ -91,6 +95,7 @@ export async function GET() {
       title: "Follow-Up Due",
       description: `${lead.full_name ?? lead.phone_number} follow-up is overdue`,
       leadId: lead.id,
+      phone: lead.phone_number,
       timestamp: lead.follow_up_date ?? lead.updated_at ?? now,
     });
   }
