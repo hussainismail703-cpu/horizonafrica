@@ -70,7 +70,8 @@ const NAV_ITEMS = [
 ];
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  const HEADED = process.env.HEADED === "1";
+  const browser = await chromium.launch({ headless: !HEADED, slowMo: HEADED ? 250 : 0 });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 

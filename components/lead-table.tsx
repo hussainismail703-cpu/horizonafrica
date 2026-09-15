@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Lead, LeadScore, LeadStatus } from "@/lib/types";
 import { phoneSearchVariants } from "@/lib/phone-utils";
 import { ScoreBadge } from "@/components/score-badge";
@@ -15,7 +16,8 @@ const statusOptions: (LeadStatus | "ALL")[] = ["ALL", "new", "contacted", "quali
 const PAGE_SIZE = 8;
 
 export function LeadTable({ leads }: LeadTableProps) {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [scoreFilter, setScoreFilter] = useState<LeadScore | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "ALL">("ALL");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);

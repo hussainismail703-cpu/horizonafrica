@@ -41,7 +41,12 @@ const APP_SECRET = process.env.APP_SECRET;
 const TEST_EMAIL =
   process.env.TEST_EMAIL || process.env.COMPREHENSIVE_TEST_EMAIL || "Hussainismail703@gmail.com";
 const TEST_PASSWORD = process.env.TEST_PASSWORD || "TestPass123!";
-const TEST_PHONE = (process.env.TEST_PHONE || "0832763116").replace(/\D/g, "");
+// Canonical international format — Meta webhooks always send 27... and the
+// campaign detection normalizes `from` before matching enrolments, so the
+// enrolment must be stored in the same canonical format.
+const TEST_PHONE = (process.env.TEST_PHONE || "0832763116")
+  .replace(/\D/g, "")
+  .replace(/^0(\d{9})$/, "27$1");
 
 const SCREENSHOT_DIR = "./tests/screenshots/comprehensive";
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
@@ -1111,7 +1116,10 @@ async function pillar3(browser) {
     await new Promise((r) => setTimeout(r, 2000));
 
     const { data: enrol } = await sb.from("campaign_enrolments").select("*").eq("id", enrolId).single();
-    if (enrol?.status === "responded") pass(`User phone ${userPhone} enrolment marked responded via WhatsApp webhook`);
+    // Detection marks 'responded', then classification advances to the final
+    // status — "I am interested" classifies as 'interested'. Both are valid
+    // post-detection states.
+    if (["responded", "interested"].includes(enrol?.status)) pass(`User phone ${userPhone} enrolment detected via WhatsApp webhook (status=${enrol.status})`);
     else fail("User phone WhatsApp response detection", `status=${enrol?.status}`);
 
     const { data: cls } = await sb.from("campaign_classifications")
