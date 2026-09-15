@@ -233,6 +233,17 @@ export interface CampaignError {
   created_at: string;
 }
 
+export interface MessageDeliveryFailure {
+  id: string;
+  message_id: string | null;
+  recipient_phone: string | null;
+  error_code: number | null;
+  error_title: string | null;
+  error_message: string | null;
+  raw_status: Record<string, unknown> | null;
+  created_at: string;
+}
+
 // ---------------------------------------------------------------------------
 // Calling Queue + Opt-out types (Fibre Re-Engagement extension)
 // ---------------------------------------------------------------------------

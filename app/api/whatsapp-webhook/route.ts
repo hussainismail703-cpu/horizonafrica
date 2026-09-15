@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { detectAndMarkCampaignResponse, extractInboundMessage } from "@/lib/campaign-detection";
 import { classifyResponse } from "@/lib/classification";
+import { extractStatusUpdates, recordDeliveryFailures } from "@/lib/delivery-status";
 
 const VERIFY_TOKEN = "horizon_africa_verify_2026";
 const N8N_WEBHOOK_URL = "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook";
@@ -73,6 +74,23 @@ export async function POST(request: NextRequest) {
       }
     } catch {
       // Not JSON or not an inbound message — continue with normal forwarding
+    }
+
+    // Meta reports delivery outcomes asynchronously via status callbacks on
+    // this same webhook (sent/delivered/read/failed). Persist failures so
+    // sends that Meta accepted but could not deliver are visible, and alert
+    // staff — otherwise they are silently marked as sent.
+    try {
+      const parsed = JSON.parse(body);
+      const failures = await recordDeliveryFailures(extractStatusUpdates(parsed));
+      for (const f of failures) {
+        await sendErrorAlert(
+          `WhatsApp delivery failed to ${f.recipient_phone}: ` +
+            `[${f.error_code}] ${f.error_title} — ${f.error_message}`
+        );
+      }
+    } catch {
+      // Status logging must never block forwarding
     }
 
     const response = await fetch(N8N_WEBHOOK_URL, {
