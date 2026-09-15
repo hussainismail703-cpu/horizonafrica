@@ -16,7 +16,7 @@ export default async function DashboardPage() {
     supabase.from("conversations").select("*", { count: "exact", head: true }),
     supabase.from("broadcast_history").select("*", { count: "exact", head: true }),
     supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5),
-    supabase.from("conversations").select("*").order("created_at", { ascending: false }).limit(5),
+    supabase.from("conversations").select("*").order("created_at", { ascending: false }).limit(100),
     supabase.from("leads").select("lead_score"),
   ]);
 
@@ -24,6 +24,15 @@ export default async function DashboardPage() {
   const totalHot = hotLeadsCount.count ?? 0;
   const totalConversations = conversationsCount.count ?? 0;
   const totalBroadcasts = broadcastsCount.count ?? 0;
+
+  // Rows are newest-first; keep the first (newest) row per phone so the widget
+  // shows one entry per distinct conversation.
+  const seenPhones = new Set<string>();
+  const recentChats = (recentConversations.data ?? []).filter((conv) => {
+    if (seenPhones.has(conv.phone_number)) return false;
+    seenPhones.add(conv.phone_number);
+    return true;
+  }).slice(0, 5);
 
   const scoreCounts = { HOT: 0, WARM: 0, COLD: 0 };
   allLeads.data?.forEach((lead) => {
@@ -152,9 +161,9 @@ export default async function DashboardPage() {
             View all <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-        {recentConversations.data && recentConversations.data.length > 0 ? (
+        {recentChats.length > 0 ? (
           <div className="space-y-3">
-            {recentConversations.data.map((conv) => (
+            {recentChats.map((conv) => (
               <div key={conv.id} className="flex items-center justify-between border-b border-outline-variant/30 pb-3 last:border-0">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-on-surface">

@@ -18,3 +18,16 @@ export function normalizePhone(phone: string): string {
   }
   return digits;
 }
+
+/**
+ * Return digit-only substrings to try when searching for a phone number.
+ * Handles SA local ("0832…") vs international ("2783…") format mismatches by
+ * also returning a leading-0 → 27 variant. Returns [] for non-digit searches.
+ */
+export function phoneSearchVariants(search: string): string[] {
+  const digits = search.replace(/\D/g, "");
+  if (digits.length < 2) return [];
+  const variants = [digits];
+  if (digits.startsWith("0")) variants.push("27" + digits.slice(1));
+  return variants;
+}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone-utils";
 
 // GET /api/campaigns/enrolments?campaign_id=<id>
 // Returns enrolments for a campaign with lead info joined.
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   if (body.phone_numbers && Array.isArray(body.phone_numbers)) {
     phoneNumbers = body.phone_numbers
-      .map((p) => p.replace(/\D/g, ""))
+      .map((p) => normalizePhone(p))
       .filter((p) => p.length > 0);
   } else if (body.group_id) {
     const { data: contacts, error: contactsErr } = await supabase
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     phoneNumbers = (contacts ?? [])
-      .map((c) => (c.phone_number ?? "").replace(/\D/g, ""))
+      .map((c) => normalizePhone(c.phone_number ?? ""))
       .filter((p) => p.length > 0);
   } else {
     return NextResponse.json(
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
 
   const leadMap = new Map<string, number>();
   for (const lead of leads ?? []) {
-    leadMap.set(lead.phone_number.replace(/\D/g, ""), lead.id);
+    leadMap.set(normalizePhone(lead.phone_number), lead.id);
   }
 
   // Check for existing active enrolments to avoid unique constraint violations

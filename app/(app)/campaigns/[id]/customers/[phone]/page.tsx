@@ -116,6 +116,10 @@ export default async function CustomerJourneyPage({
             <p className="font-medium text-on-surface">{lead?.email ?? "—"}</p>
           </div>
           <div>
+            <p className="text-xs uppercase tracking-wider text-on-surface-variant">Preferred Contact</p>
+            <p className="font-medium text-on-surface">{lead?.preferred_contact_number ?? "—"}</p>
+          </div>
+          <div>
             <p className="text-xs uppercase tracking-wider text-on-surface-variant">Lead Status</p>
             <p className="font-medium text-on-surface">{lead?.status ?? "—"}</p>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Lead, LeadScore, LeadStatus } from "@/lib/types";
+import { phoneSearchVariants } from "@/lib/phone-utils";
 import { ScoreBadge } from "@/components/score-badge";
 import { Search, Download, X, Save, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -21,11 +22,14 @@ export function LeadTable({ leads }: LeadTableProps) {
   const [page, setPage] = useState(0);
 
   const filtered = useMemo(() => {
+    const phoneVariants = phoneSearchVariants(search);
     return leads.filter((lead) => {
+      const leadDigits = lead.phone_number.replace(/\D/g, "");
       const matchesSearch =
         !search ||
         lead.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-        lead.phone_number.includes(search);
+        lead.phone_number.includes(search) ||
+        phoneVariants.some((v) => leadDigits.includes(v));
       const matchesScore = scoreFilter === "ALL" || lead.lead_score === scoreFilter;
       const matchesStatus = statusFilter === "ALL" || lead.status === statusFilter;
       return matchesSearch && matchesScore && matchesStatus;
@@ -298,6 +302,7 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
                 <Field label="Household Size" value={currentLead.household_size} />
                 <Field label="Internet Usage" value={currentLead.internet_usage} />
                 <Field label="Physical Address" value={currentLead.physical_address} fullWidth />
+                <Field label="Preferred Contact Number" value={currentLead.preferred_contact_number} />
                 <Field label="Notes" value={currentLead.notes} fullWidth />
                 {currentLead.follow_up_requested && (
                   <>
