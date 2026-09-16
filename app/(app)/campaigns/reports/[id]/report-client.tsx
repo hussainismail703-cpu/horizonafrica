@@ -1,6 +1,7 @@
 "use client";
 
 import { CampaignStats } from "@/lib/campaign-stats";
+import { formatDateTime } from "@/lib/format";
 import { StatCard } from "@/components/stat-card";
 import {
   Send,
@@ -353,7 +354,7 @@ export function CampaignReportClient({ stats }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
-                      {new Date(i.occurred_at).toLocaleString("en-ZA", {
+                      {formatDateTime(i.occurred_at, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}
@@ -407,7 +408,7 @@ export function CampaignReportClient({ stats }: Props) {
                       {f.meta_error ?? "Unknown error"}
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
-                      {new Date(f.occurred_at).toLocaleString("en-ZA", {
+                      {formatDateTime(f.occurred_at, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}
@@ -459,7 +460,7 @@ export function CampaignReportClient({ stats }: Props) {
                       {e.error_message ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">
-                      {new Date(e.created_at).toLocaleString("en-ZA", {
+                      {formatDateTime(e.created_at, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}

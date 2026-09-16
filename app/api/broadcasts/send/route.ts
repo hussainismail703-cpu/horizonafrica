@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/phone-utils";
+import { formatDateTime } from "@/lib/format";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
   const { data: historyRecord, error: historyError } = await supabase
     .from("broadcast_history")
     .insert({
-      campaign_name: campaign_name || `Broadcast ${new Date().toLocaleString()}`,
+      campaign_name: campaign_name || `Broadcast ${formatDateTime(new Date())}`,
       group_id: group_id ? Number(group_id) : null,
       template_name,
       message_content: null,

@@ -3,18 +3,9 @@ import { notFound } from "next/navigation";
 import { Campaign, CampaignAuditLog } from "@/lib/types";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-function formatDateTime(d: string): string {
-  return new Date(d).toLocaleString("en-ZA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default async function AuditPage({
   params,

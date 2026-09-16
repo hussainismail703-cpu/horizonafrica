@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { formatDateTime } from "@/lib/format";
 
 interface CampaignErrorRow {
   id: string;
@@ -104,7 +105,7 @@ export function CampaignErrors({ campaignId }: Props) {
                         {e.error_message ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-on-surface-variant">
-                        {new Date(e.created_at).toLocaleString("en-ZA", {
+                        {formatDateTime(e.created_at, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}

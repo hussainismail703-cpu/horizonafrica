@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Lead, LeadScore, LeadStatus } from "@/lib/types";
 import { phoneSearchVariants } from "@/lib/phone-utils";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { ScoreBadge } from "@/components/score-badge";
 import { Search, Download, X, Save, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -134,7 +135,7 @@ export function LeadTable({ leads }: LeadTableProps) {
                     )}
                   </td>
                   <td className="px-5 py-3.5 text-on-surface-variant">
-                    {new Date(lead.created_at).toLocaleDateString()}
+                    {formatDate(lead.created_at)}
                   </td>
                 </tr>
               ))
@@ -309,9 +310,9 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
                 {currentLead.follow_up_requested && (
                   <>
                     <Field label="Follow-Up Requested" value="Yes" />
-                    <Field label="Follow-Up Date" value={currentLead.follow_up_date ? new Date(currentLead.follow_up_date).toLocaleDateString() : null} />
+                    <Field label="Follow-Up Date" value={currentLead.follow_up_date ? formatDate(currentLead.follow_up_date) : null} />
                     <Field label="Follow-Up Sent" value={currentLead.follow_up_sent ? "Yes" : "No"} />
-                    <Field label="Follow-Up Sent At" value={currentLead.follow_up_sent_at ? new Date(currentLead.follow_up_sent_at).toLocaleString() : null} />
+                    <Field label="Follow-Up Sent At" value={currentLead.follow_up_sent_at ? formatDateTime(currentLead.follow_up_sent_at) : null} />
                   </>
                 )}
                 {currentLead.needs_escalation && (
@@ -319,8 +320,8 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
                 )}
               </>
             )}
-            <Field label="Created" value={new Date(currentLead.created_at).toLocaleString()} />
-            <Field label="Updated" value={new Date(currentLead.updated_at).toLocaleString()} />
+            <Field label="Created" value={formatDateTime(currentLead.created_at)} />
+            <Field label="Updated" value={formatDateTime(currentLead.updated_at)} />
           </div>
         </div>
       </div>
