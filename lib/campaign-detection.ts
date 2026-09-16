@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { normalizePhone } from "@/lib/phone-utils";
+import { logCampaignError } from "@/lib/campaign-engine";
 
 interface EnrolmentDetection {
   enrolment_id: string;
@@ -9,6 +10,45 @@ interface EnrolmentDetection {
 }
 
 const STOP_PATTERN = /^\s*(stop|unsubscribe|opt out|opt-out|do not contact me|don'?t contact me|remove me)\s*$/i;
+
+/**
+ * Run a supabase-js query, retrying once on failure. supabase-js resolves with
+ * { error } instead of throwing — including on network-level fetch failures —
+ * so callers MUST inspect the error or a failed write is silently dropped.
+ */
+export async function withRetry<T>(
+  fn: () => PromiseLike<{ error: { message: string } | null } & T>
+): Promise<{ error: { message: string } | null } & T> {
+  let result = await fn();
+  if (result.error) {
+    await new Promise((r) => setTimeout(r, 500));
+    result = await fn();
+  }
+  return result;
+}
+
+export async function logCampaignWriteError(
+  campaignId: string | null,
+  enrolId: string | null,
+  phone: string,
+  errorType: string,
+  message: string
+) {
+  console.error(`[campaign-write] ${errorType}: ${message}`);
+  try {
+    if (campaignId) {
+      await logCampaignError({
+        campaignId,
+        enrolId,
+        phoneNumber: phone,
+        errorType,
+        errorMessage: message,
+      });
+    }
+  } catch {
+    // Error logging must never break detection
+  }
+}
 
 /**
  * Check if a phone number is enrolled in an active campaign.
@@ -41,7 +81,7 @@ export async function detectAndMarkCampaignResponse(
   const isStop = messageBody ? STOP_PATTERN.test(messageBody.trim()) : false;
 
   // Record the inbound interaction (always, even for STOP)
-  await supabase.from("campaign_interactions").insert({
+  const { error: interactionErr } = await supabase.from("campaign_interactions").insert({
     campaign_id: enrolment.campaign_id,
     enrol_id: enrolment.id,
     phone_number: phone,
@@ -52,31 +92,64 @@ export async function detectAndMarkCampaignResponse(
     delivery_status: "delivered",
     meta_message_id: null,
   });
+  if (interactionErr) {
+    await logCampaignWriteError(
+      enrolment.campaign_id,
+      enrolment.id,
+      phone,
+      "interaction_insert_failed",
+      interactionErr.message
+    );
+  }
 
   if (isStop) {
     // Mark ALL active/no_response_final enrolments for this phone as opted_out,
     // not just the detected one. The customer requested to stop all marketing
     // communication, so every active campaign enrolment should be closed.
-    await supabase
-      .from("campaign_enrolments")
-      .update({
-        status: "opted_out",
-        final_outcome: "OPTED OUT",
-      })
-      .eq("phone_number", phone)
-      .in("status", ["active", "no_response_final"]);
+    // This write is retried because a silently-dropped opt-out update leaves
+    // the enrolment 'active' while the phone is on the global opt-out list.
+    const { error: optOutErr } = await withRetry(() =>
+      supabase
+        .from("campaign_enrolments")
+        .update({
+          status: "opted_out",
+          final_outcome: "OPTED OUT",
+        })
+        .eq("phone_number", phone)
+        .in("status", ["active", "no_response_final"])
+    );
+    if (optOutErr) {
+      await logCampaignWriteError(
+        enrolment.campaign_id,
+        enrolment.id,
+        phone,
+        "opt_out_update_failed",
+        optOutErr.message
+      );
+    }
 
     // Add to global opt_out_list (upsert — phone is unique)
-    await supabase
-      .from("opt_out_list")
-      .upsert(
-        {
-          phone_number: phone,
-          reason: "STOP keyword",
-          source_campaign_id: enrolment.campaign_id,
-        },
-        { onConflict: "phone_number" }
+    const { error: optOutListErr } = await withRetry(() =>
+      supabase
+        .from("opt_out_list")
+        .upsert(
+          {
+            phone_number: phone,
+            reason: "STOP keyword",
+            source_campaign_id: enrolment.campaign_id,
+          },
+          { onConflict: "phone_number" }
+        )
+    );
+    if (optOutListErr) {
+      await logCampaignWriteError(
+        enrolment.campaign_id,
+        enrolment.id,
+        phone,
+        "opt_out_upsert_failed",
+        optOutListErr.message
       );
+    }
 
     return {
       enrolment_id: enrolment.id,
@@ -90,13 +163,24 @@ export async function detectAndMarkCampaignResponse(
   // If the enrolment was no_response_final (late response after grace period),
   // clear nurture_flag and final_outcome since the customer did respond.
   const wasNoResponseFinal = enrolment.status === "no_response_final";
-  await supabase
-    .from("campaign_enrolments")
-    .update({
-      status: "responded",
-      ...(wasNoResponseFinal && { nurture_flag: false, final_outcome: null }),
-    })
-    .eq("id", enrolment.id);
+  const { error: respondedErr } = await withRetry(() =>
+    supabase
+      .from("campaign_enrolments")
+      .update({
+        status: "responded",
+        ...(wasNoResponseFinal && { nurture_flag: false, final_outcome: null }),
+      })
+      .eq("id", enrolment.id)
+  );
+  if (respondedErr) {
+    await logCampaignWriteError(
+      enrolment.campaign_id,
+      enrolment.id,
+      phone,
+      "responded_update_failed",
+      respondedErr.message
+    );
+  }
 
   return {
     enrolment_id: enrolment.id,
