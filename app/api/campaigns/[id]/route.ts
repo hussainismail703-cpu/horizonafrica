@@ -224,11 +224,12 @@ export async function DELETE(
     .eq("entity_id", id);
 
   // Also delete audit log entries for the enrolments
+  // (the DB cleanup trigger handles classification audit rows)
   if (enrolmentIds.length > 0) {
     await supabase
       .from("campaign_audit_log")
       .delete()
-      .eq("entity_type", "enrolment")
+      .eq("entity_type", "campaign_enrolment")
       .in("entity_id", enrolmentIds);
   }
 

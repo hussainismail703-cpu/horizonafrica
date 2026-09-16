@@ -9,6 +9,7 @@ import {
   QueueStatus,
 } from "@/lib/types";
 import Link from "next/link";
+import { formatDate } from "@/lib/format";
 import { Phone, PhoneCall, CheckCircle2, XCircle, CalendarClock, Loader2, PhoneOutgoing } from "lucide-react";
 
 interface CallingQueueClientProps {
@@ -280,7 +281,7 @@ function QueueRow({
           </span>
           {item.called_at && (
             <div className="mt-1 text-xs text-on-surface-variant/70">
-              {new Date(item.called_at).toLocaleDateString("en-ZA")}
+              {formatDate(item.called_at)}
             </div>
           )}
         </td>

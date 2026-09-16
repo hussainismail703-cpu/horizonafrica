@@ -232,12 +232,16 @@ async function main() {
 
   // ── Login ──
   console.log("\n-- Login --");
-  await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1500); // let React hydrate before filling controlled inputs
-  await page.locator("#email").fill(TEST_EMAIL);
-  await page.locator("#password").fill(TEST_PASSWORD);
-  await page.locator("button[type='submit']").first().click();
-  await page.waitForURL("**/dashboard", { timeout: 20000 }).catch(() => {});
+  // Hydration race: inputs are controlled React components — filling before
+  // hydration completes gets reset. Retry fill+click once if not redirected.
+  for (let attempt = 0; attempt < 2 && !page.url().includes("/dashboard"); attempt++) {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1500); // let React hydrate before filling controlled inputs
+    await page.locator("#email").fill(TEST_EMAIL);
+    await page.locator("#password").fill(TEST_PASSWORD);
+    await page.locator("button[type='submit']").first().click();
+    await page.waitForURL("**/dashboard", { waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {});
+  }
   await page.waitForTimeout(1500);
   if (!page.url().includes("/dashboard")) {
     console.error("Login failed — aborting");
@@ -283,7 +287,9 @@ async function main() {
     // U2: conversations list shows NEWEST message preview
     try {
       const old = new Date(Date.now() - 3600e3).toISOString();
-      const now = new Date().toISOString();
+      // Slightly future-dated so in-flight n8n/test inserts can't outrank it —
+      // makes the U2b top-position check deterministic instead of racy.
+      const now = new Date(Date.now() + 3600e3).toISOString();
       await sbInsert("conversations", {
         phone_number: GAP_PHONE, contact_name: null, incoming_message: "GAP_OLD_MSG_ALPHA",
         ai_response: "old reply", lead_score: "COLD", timestamp: old, created_at: old,
@@ -303,8 +309,16 @@ async function main() {
       } else {
         fail("U2/G19", "Conversation list preview shows newest message", `conversation item not found; saw: ${itemText.slice(0, 80)}`);
       }
-      // ordering: gap conv (now) should be at/near top — check it appears in first 3 items
-      const firstItems = await page.locator(".overflow-y-auto button").allTextContents().catch(() => []);
+      // ordering: gap conv (now) should be at/near top — check it appears in first 3 items.
+      // Scope to the scroll container that actually holds conversation items.
+      // Multiple .overflow-y-auto ancestors match (page scroll area wraps the
+      // list) — .last() picks the innermost one, whose only buttons are
+      // conversation items (score filters live outside it).
+      const convList = page
+        .locator(".overflow-y-auto")
+        .filter({ has: page.locator("button", { hasText: GAP_PHONE }) })
+        .last();
+      const firstItems = await convList.locator("button").allTextContents().catch(() => []);
       const idx = firstItems.findIndex((t) => t.includes(GAP_PHONE));
       if (idx !== -1 && idx < 3) {
         pass("U2b", "Newest conversation sorts to top of list", `position=${idx + 1}`);
@@ -373,14 +387,17 @@ async function main() {
     // U5: phone search variants
     try {
       await page.goto(`${BASE_URL}/leads`, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(2000);
+      // Wait for the server-rendered table rows, then for React to hydrate —
+      // filling the controlled search input before hydration resets it.
+      await page.locator("tbody tr").first().waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1500);
       const search = page.locator("input[placeholder*='Search by name or phone']");
       await search.fill("0832763116");
       await page.waitForTimeout(800);
-      const found1 = await page.locator("tr", { hasText: "27832763116" }).count();
+      const found1 = await page.locator("tbody tr", { hasText: "27832763116" }).count();
       await search.fill("+27832763116");
       await page.waitForTimeout(800);
-      const found2 = await page.locator("tr", { hasText: "27832763116" }).count();
+      const found2 = await page.locator("tbody tr", { hasText: "27832763116" }).count();
       if (found1 > 0 && found2 > 0) {
         pass("U5", "Leads search matches 083.../ +27... variants for stored 27... number");
       } else {
