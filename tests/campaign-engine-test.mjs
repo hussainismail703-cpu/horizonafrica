@@ -167,8 +167,16 @@ async function run() {
     else fail("Create button disabled validation", "Button not disabled with empty name");
 
     const testCampaignName = `Playwright Test Campaign ${Date.now()}`;
+    // Hydration race: controlled inputs reset if filled before React hydrates.
+    // Fill, then verify the value stuck; refill once if it didn't.
+    await page.waitForTimeout(1500);
     await nameInput.fill(testCampaignName);
     await objectiveTextarea.fill("Testing campaign creation via Playwright");
+    await page.waitForTimeout(500);
+    if ((await nameInput.inputValue().catch(() => "")) !== testCampaignName) {
+      await nameInput.fill(testCampaignName);
+      await objectiveTextarea.fill("Testing campaign creation via Playwright");
+    }
 
     if (await createButton.isEnabled()) pass("Create button enabled when name filled");
     else fail("Create button enabled", "Button still disabled");
@@ -201,7 +209,8 @@ async function run() {
   // ===========================================================================
   console.log("\n=== SECTION 3: CAMPAIGN DETAIL PAGE ===");
 
-  const campaignId = testCampaignId || "91619bef-9447-4866-afb6-a4c11b094449";
+  // Fallback: the real Fibre Lead Re-Engagement campaign (survives DB cleanup)
+  const campaignId = testCampaignId || "febe1cac-cf87-46c3-bbc7-160d3b96e28e";
 
   try {
     await robustGoto(page, `${BASE_URL}/campaigns/${campaignId}`);
@@ -711,17 +720,36 @@ async function run() {
       await screenshot(page, "10-no-404");
     }
 
-    // Empty campaign (no steps)
-    if (testCampaignId) {
-      await robustGoto(page, `${BASE_URL}/campaigns/${testCampaignId}`);
+    // Empty campaign (no steps) — testCampaignId has steps added in Section 3,
+    // so create a dedicated empty campaign via the API for this check.
+    let emptyCampaignId = null;
+    try {
+      const createRes = await page.context().request.post(`${BASE_URL}/api/campaigns`, {
+        data: { name: `Empty Campaign Test ${Date.now()}`, objective: "empty-state check" },
+      });
+      if (createRes.ok()) {
+        const body = await createRes.json().catch(() => null);
+        emptyCampaignId = body?.id ?? null;
+      }
+    } catch {}
+
+    if (emptyCampaignId) {
+      await robustGoto(page, `${BASE_URL}/campaigns/${emptyCampaignId}`);
       const noSteps = page.locator("text=No steps yet");
       const addStepBtn = page.locator("button", { hasText: "Add Step" });
       const activateBtn = page.locator("button", { hasText: "Activate" });
 
+      // Wait for the status-controls section to render — the client component
+      // fetches campaign data after navigation, so the button may not exist yet.
+      await activateBtn.waitFor({ state: "attached", timeout: 10000 }).catch(() => {});
       if (await noSteps.isVisible().catch(() => false)) pass("Empty campaign shows 'No steps yet' message");
       if (await addStepBtn.isVisible().catch(() => false)) pass("Add Step button visible on empty campaign");
       if (await activateBtn.isDisabled().catch(() => false)) pass("Activate button disabled when no steps");
       else if (await activateBtn.isVisible().catch(() => false)) fail("Activate disabled on empty", "Button not disabled");
+      // Cleanup the empty campaign (DELETE requires non-active status — draft is fine)
+      await page.context().request.delete(`${BASE_URL}/api/campaigns/${emptyCampaignId}`).catch(() => {});
+    } else {
+      fail("Activate disabled on empty", "Could not create an empty test campaign via API");
     }
   } catch (err) {
     fail("Responsive/edge cases", err.message, await screenshot(page, "10-error").catch(() => {}));

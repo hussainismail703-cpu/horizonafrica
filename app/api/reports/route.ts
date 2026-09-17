@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/format";
+
+// en-CA yields YYYY-MM-DD — a stable, sortable day key. Pinned to
+// Africa/Johannesburg so chart buckets split on SA calendar days,
+// not UTC (the server timezone on Vercel).
+const SA_TZ = "Africa/Johannesburg";
+const dayKey = (d: string | Date) =>
+  new Date(d).toLocaleDateString("en-CA", { timeZone: SA_TZ });
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -104,17 +112,15 @@ export async function GET(request: NextRequest) {
     const monthMap: Record<string, { leads: number; conversations: number }> = {};
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = d.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" });
+      const key = formatDate(d, { month: "short", year: "2-digit" });
       monthMap[key] = { leads: 0, conversations: 0 };
     }
     recentLeads.data?.forEach((lead) => {
-      const d = new Date(lead.created_at);
-      const key = d.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" });
+      const key = formatDate(lead.created_at, { month: "short", year: "2-digit" });
       if (monthMap[key]) monthMap[key].leads++;
     });
     recentConversations.data?.forEach((conv) => {
-      const d = new Date(conv.created_at);
-      const key = d.toLocaleDateString("en-ZA", { month: "short", year: "2-digit" });
+      const key = formatDate(conv.created_at, { month: "short", year: "2-digit" });
       if (monthMap[key]) monthMap[key].conversations++;
     });
     Object.entries(monthMap).forEach(([date, vals]) =>
@@ -126,21 +132,19 @@ export async function GET(request: NextRequest) {
     for (let i = bucketCount - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const key = d.toISOString().split("T")[0];
-      dateMap[key] = { leads: 0, conversations: 0 };
+      dateMap[dayKey(d)] = { leads: 0, conversations: 0 };
     }
     recentLeads.data?.forEach((lead) => {
-      const key = lead.created_at?.split("T")[0];
+      const key = lead.created_at ? dayKey(lead.created_at) : null;
       if (key && dateMap[key]) dateMap[key].leads++;
     });
     recentConversations.data?.forEach((conv) => {
-      const key = conv.created_at?.split("T")[0];
+      const key = conv.created_at ? dayKey(conv.created_at) : null;
       if (key && dateMap[key]) dateMap[key].conversations++;
     });
     Object.entries(dateMap).forEach(([date, vals]) => {
-      const d = new Date(date);
       buckets.push({
-        date: d.toLocaleDateString("en-ZA", { day: "2-digit", month: "short" }),
+        date: formatDate(date, { day: "2-digit", month: "short" }),
         leads: vals.leads,
         conversations: vals.conversations,
       });

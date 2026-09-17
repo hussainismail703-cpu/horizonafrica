@@ -230,28 +230,28 @@ const tests = [
   { id: "A7", desc: "Can someone contact me?", input: "Can someone contact me?", payload: webhook("Can someone contact me?"), expect: { class: "interested", enrol: "interested", queue: true, lead: "qualified" } },
   { id: "A8", desc: "Please call me", input: "Please call me", payload: webhook("Please call me"), expect: { class: "interested", enrol: "interested", queue: true, lead: "qualified" } },
   { id: "A9", desc: "I want the 50 Mbps package, please contact me", input: "I want the 50 Mbps package, please contact me", payload: webhook("I want the 50 Mbps package, please contact me"), expect: { class: "interested", enrol: "interested", queue: true, lead: "qualified" } },
-  { id: "A10", desc: "How much is the 50 Mbps package?", input: "How much is the 50 Mbps package?", payload: webhook("How much is the 50 Mbps package?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: "new" } },
-  { id: "A11", desc: "What packages are available?", input: "What packages are available?", payload: webhook("What packages are available?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: "new" } },
-  { id: "A12", desc: "Is fibre available in my area?", input: "Is fibre available in my area?", payload: webhook("Is fibre available in my area?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: "new" } },
+  { id: "A10", desc: "How much is the 50 Mbps package?", input: "How much is the 50 Mbps package?", payload: webhook("How much is the 50 Mbps package?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
+  { id: "A11", desc: "What packages are available?", input: "What packages are available?", payload: webhook("What packages are available?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
+  { id: "A12", desc: "Is fibre available in my area?", input: "Is fibre available in my area?", payload: webhook("Is fibre available in my area?"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
   { id: "A13", desc: "Not interested", input: "Not interested", payload: webhook("Not interested"), expect: { class: "not_interested", enrol: "not_interested", queue: false, lead: "lost" } },
   { id: "A14", desc: "Not interested, the price is too high", input: "Not interested, the price is too high", payload: webhook("Not interested, the price is too high"), expect: { class: "not_interested", rejReason: "price", enrol: "not_interested", queue: false, lead: "lost" } },
   { id: "A15", desc: "Too expensive", input: "Too expensive", payload: webhook("Too expensive"), expect: { class: "not_interested", rejReason: "price", enrol: "not_interested", queue: false, lead: "lost" } },
   { id: "A16", desc: "I already have Telkom fibre", input: "I already have Telkom fibre", payload: webhook("I already have Telkom fibre"), expect: { class: "already_has_service", rejReason: "already_has_service", enrol: "not_interested", queue: false, lead: "lost" } },
   { id: "A17", desc: "I have Vodacom fibre", input: "I have Vodacom fibre", payload: webhook("I have Vodacom fibre"), expect: { class: "already_has_service", rejReason: "competitor", enrol: "not_interested", queue: false, lead: "lost" } },
-  { id: "A18", desc: "STOP", input: "STOP", payload: webhook("STOP"), expect: { class: null, enrol: "opted_out", queue: false, lead: "new", optOut: true } },
-  { id: "A19", desc: "Unsubscribe", input: "Unsubscribe", payload: webhook("Unsubscribe"), expect: { class: null, enrol: "opted_out", queue: false, lead: "new", optOut: true } },
+  { id: "A18", desc: "STOP", input: "STOP", payload: webhook("STOP"), expect: { class: null, enrol: "opted_out", queue: false, lead: ["new", "contacted"], optOut: true } },
+  { id: "A19", desc: "Unsubscribe", input: "Unsubscribe", payload: webhook("Unsubscribe"), expect: { class: null, enrol: "opted_out", queue: false, lead: ["new", "contacted"], optOut: true } },
   { id: "A20", desc: "Call me back", input: "Call me back", payload: webhook("Call me back"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
   { id: "A21", desc: "I'd like to speak to a consultant", input: "I'd like to speak to a consultant", payload: webhook("I'd like to speak to a consultant"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
-  { id: "A22", desc: "xyzabc123 (gibberish)", input: "xyzabc123", payload: webhook("xyzabc123"), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: "new" } },
-  { id: "A23", desc: "(empty message)", input: "", payload: webhook(""), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: "new" } },
+  { id: "A22", desc: "xyzabc123 (gibberish)", input: "xyzabc123", payload: webhook("xyzabc123"), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
+  { id: "A23", desc: "(empty message)", input: "", payload: webhook(""), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
 
   // Group B — Step 2 Numbered Menu
-  { id: "B1", desc: "1 (more info)", input: "1", payload: webhook("1"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: "new" } },
+  { id: "B1", desc: "1 (more info)", input: "1", payload: webhook("1"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
   { id: "B2", desc: "2 (consultant)", input: "2", payload: webhook("2"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
   { id: "B3", desc: "3 (interested)", input: "3", payload: webhook("3"), expect: { class: "interested", enrol: "interested", queue: true, lead: "qualified" } },
   { id: "B4", desc: "4 (not interested)", input: "4", payload: webhook("4"), expect: { class: "not_interested", enrol: "not_interested", queue: false, lead: "lost" } },
-  { id: "B5", desc: "STOP (B)", input: "STOP", payload: webhook("STOP"), expect: { class: null, enrol: "opted_out", queue: false, lead: "new", optOut: true } },
-  { id: "B6", desc: "1 – I'd like more information", input: "1 – I'd like more information", payload: webhook("1 – I'd like more information"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: "new" } },
+  { id: "B5", desc: "STOP (B)", input: "STOP", payload: webhook("STOP"), expect: { class: null, enrol: "opted_out", queue: false, lead: ["new", "contacted"], optOut: true } },
+  { id: "B6", desc: "1 – I'd like more information", input: "1 – I'd like more information", payload: webhook("1 – I'd like more information"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
   { id: "B7", desc: "2 – I'd like to speak to a consultant", input: "2 – I'd like to speak to a consultant", payload: webhook("2 – I'd like to speak to a consultant"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
 
   // Group E — Duplicate Prevention & Edge Cases
@@ -324,9 +324,12 @@ function evaluate(test, state) {
   results.queue = hasQueue === e.queue ? "PASS" : `FAIL: expected ${e.queue ? "yes" : "no"}, got ${hasQueue ? "yes" : "no"}`;
   if (hasQueue !== e.queue) issues.push(`queue expected ${e.queue ? "yes" : "no"}, got ${hasQueue ? "yes" : "no"}`);
 
-  // Lead status
-  results.lead = s.lead?.status === e.lead ? "PASS" : `FAIL: expected ${e.lead}, got ${s.lead?.status}`;
-  if (s.lead?.status !== e.lead) issues.push(`lead expected ${e.lead}, got ${s.lead?.status}`);
+  // Lead status — e.lead may be a single value or an array of acceptable values.
+  // n8n advances engaged leads new->contacted asynchronously, so either is valid
+  // at read time for scenarios where classification itself does not set status.
+  const leadExpected = Array.isArray(e.lead) ? e.lead : [e.lead];
+  results.lead = leadExpected.includes(s.lead?.status) ? "PASS" : `FAIL: expected ${leadExpected.join("/")}, got ${s.lead?.status}`;
+  if (!leadExpected.includes(s.lead?.status)) issues.push(`lead expected ${leadExpected.join("/")}, got ${s.lead?.status}`);
 
   // Opt-out
   if (e.optOut) {

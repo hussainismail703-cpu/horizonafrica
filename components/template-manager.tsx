@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Template } from "@/lib/types";
+import { formatTime } from "@/lib/format";
 import {
   Plus,
   Loader2,
@@ -296,7 +297,7 @@ export function TemplateManager() {
 
         {lastRefresh && (
           <p className="mt-2 text-xs text-on-surface-variant/60">
-            Last updated: {lastRefresh.toLocaleTimeString()} · Auto-refreshing
+            Last updated: {formatTime(lastRefresh)} · Auto-refreshing
             every 15s
           </p>
         )}

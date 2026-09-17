@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/phone-utils";
+import { formatDateTime } from "@/lib/format";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
@@ -62,15 +63,39 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Either test_phone or group_id is required" }, { status: 400 });
   }
 
+  // Exclude globally opted-out phone numbers (STOP replies from any channel)
+  const { data: optedOutRows } = await supabase
+    .from("opt_out_list")
+    .select("phone_number");
+
+  const optedOutSet = new Set(
+    (optedOutRows ?? []).map((o) => normalizePhone(o.phone_number))
+  );
+
+  const skippedOptedOut = recipients.filter((r) =>
+    optedOutSet.has(normalizePhone(r.phone_number))
+  ).length;
+  recipients = recipients.filter(
+    (r) => !optedOutSet.has(normalizePhone(r.phone_number))
+  );
+
   if (recipients.length === 0) {
-    return NextResponse.json({ error: "No recipients found" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          skippedOptedOut > 0
+            ? "All recipients have opted out"
+            : "No recipients found",
+      },
+      { status: 400 }
+    );
   }
 
   // Create broadcast history record
   const { data: historyRecord, error: historyError } = await supabase
     .from("broadcast_history")
     .insert({
-      campaign_name: campaign_name || `Broadcast ${new Date().toLocaleString()}`,
+      campaign_name: campaign_name || `Broadcast ${formatDateTime(new Date())}`,
       group_id: group_id ? Number(group_id) : null,
       template_name,
       message_content: null,
@@ -175,6 +200,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     broadcast_id: broadcastId,
     total_recipients: recipients.length,
+    skipped_opted_out: skippedOptedOut,
     sent,
     failed,
     errors: errors.length > 0 ? errors : undefined,

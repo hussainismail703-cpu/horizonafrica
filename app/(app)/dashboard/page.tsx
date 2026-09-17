@@ -3,6 +3,7 @@ import { StatCard } from "@/components/stat-card";
 import { ScoreBadge } from "@/components/score-badge";
 import { Users, Flame, MessageSquare, Radio, ArrowRight } from "lucide-react";
 import { extractMessageText } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -176,7 +177,7 @@ export default async function DashboardPage() {
                 <div className="ml-3 flex flex-col items-end gap-1">
                   <ScoreBadge score={conv.lead_score as "HOT" | "WARM" | "COLD"} />
                   <span className="text-xs text-on-surface-variant/60">
-                    {new Date(conv.created_at).toLocaleDateString()}
+                    {formatDate(conv.created_at)}
                   </span>
                 </div>
               </div>

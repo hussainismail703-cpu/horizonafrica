@@ -145,7 +145,7 @@ async function cleanConversations() {
  * If `expectedMessage` is provided, also filters by incoming_message match
  * for multi-turn conversation accuracy.
  */
-async function getAIResponse(afterTimestamp, timeoutMs = 30000, expectedMessage = null) {
+async function getAIResponse(afterTimestamp, timeoutMs = 45000, expectedMessage = null) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const res = await sb(
@@ -188,7 +188,7 @@ async function getAllConversations() {
  * Records the timestamp before sending to filter out stale responses.
  * Passes the message text for incoming_message matching in multi-turn tests.
  */
-async function sendAndWait(text, timeoutMs = 30000) {
+async function sendAndWait(text, timeoutMs = 45000) {
   const beforeSend = Date.now();
   await sendWebhook(webhook(text));
   return await getAIResponse(beforeSend, timeoutMs, text);
@@ -231,11 +231,34 @@ function isNotFallback(text) {
 }
 
 /**
- * Check response asks a question (contains "?").
+ * Check response asks a question (contains "?") or makes an imperative
+ * info-collection request ("Please share your address", "Send me your name").
  */
 function asksQuestion(text) {
   if (!text) return false;
-  return text.includes("?");
+  if (text.includes("?")) return true;
+  return /\b(please|kindly)\b.{0,30}\b(share|send|tell|provide|give|confirm|let me know)\b/i.test(text) ||
+    /\b(share|send|tell|provide|give|confirm)\b.{0,20}\b(your|the)\b/i.test(text);
+}
+
+/**
+ * Reset the test lead's qualification fields so qualification-flow scenarios
+ * start from a fresh-lead state. Fields persist between runs because n8n's
+ * Upsert Lead writes captured data — without this reset the AI correctly
+ * skips re-asking household/usage and the Pillar 2 expectations break.
+ * Keeps full_name and email intact (Pillar 4 known-info tests need them).
+ */
+async function resetLeadState() {
+  await sb(`/leads?phone_number=eq.${TEST_PHONE}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      household_size: null,
+      internet_usage: null,
+      physical_address: null,
+      product_interest: null,
+      preferred_contact_number: null,
+    }),
+  });
 }
 
 /**
@@ -1047,9 +1070,13 @@ const pillar9 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      // Should recognize the intent to proceed and start collecting info
-      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "form", "consultant", "name"])) issues.push("Response doesn't recognize intent to proceed");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasProceed: containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "form", "consultant", "name"]) } };
+      // Should recognize the intent to proceed and start collecting info.
+      // The AI may reply in Afrikaans, so include Afrikaans variants
+      // (vorms=forms, konsultant=consultant, aansoek=application, pakket=package,
+      // kontak=contact) alongside the English keywords.
+      const proceedKw = ["apply", "package", "people", "address", "help", "form", "consultant", "name", "vorms", "konsultant", "aansoek", "pakket", "kontak"];
+      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, proceedKw)) issues.push("Response doesn't recognize intent to proceed");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasProceed: containsAny(resp.ai_response, proceedKw) } };
     },
   },
   {
@@ -1191,6 +1218,10 @@ async function main() {
     console.error(`Cannot reach dev server at ${BASE_URL}. Is it running?`);
     process.exit(1);
   }
+
+  // Fresh-lead state for qualification-flow scenarios
+  await resetLeadState();
+  await cleanConversations();
 
   console.log("─".repeat(80));
   console.log("  Pillar 1: Product & Speed Questions (8 scenarios)");

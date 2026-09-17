@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Lead } from "@/lib/types";
+import { formatDate, formatTime } from "@/lib/format";
 import {
   Bell,
   Send,
@@ -199,7 +200,7 @@ export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
               Send WhatsApp reminders to leads who asked for time to decide
               {lastRefresh && (
                 <span className="ml-2 text-xs text-on-surface-variant/60">
-                  · Last updated: {lastRefresh.toLocaleTimeString()} · Auto-refreshing every 30s
+                  · Last updated: {formatTime(lastRefresh)} · Auto-refreshing every 30s
                 </span>
               )}
             </p>
@@ -297,9 +298,7 @@ export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
                       {lead.offered_package ?? lead.product_interest ?? "—"}
                     </td>
                     <td className="px-5 py-3.5 text-on-surface-variant">
-                      {lead.follow_up_date
-                        ? new Date(lead.follow_up_date).toLocaleDateString()
-                        : "—"}
+                      {formatDate(lead.follow_up_date)}
                     </td>
                     <td className="px-5 py-3.5">
                       <span
@@ -326,7 +325,7 @@ export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
                       ) : (
                         <span className="text-xs text-on-surface-variant/60">
                           {lead.follow_up_sent_at
-                            ? new Date(lead.follow_up_sent_at).toLocaleDateString()
+                            ? formatDate(lead.follow_up_sent_at)
                             : ""}
                         </span>
                       )}
