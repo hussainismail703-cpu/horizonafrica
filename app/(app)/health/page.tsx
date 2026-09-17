@@ -17,6 +17,7 @@ import {
   Bell,
   Loader2,
 } from "lucide-react";
+import { formatTime } from "@/lib/format";
 
 interface ServiceCheck {
   name: string;
@@ -185,7 +186,7 @@ export default function HealthPage() {
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
                 {lastRefreshed
-                  ? lastRefreshed.toLocaleTimeString("en-ZA", {
+                  ? formatTime(lastRefreshed, {
                       hour: "2-digit",
                       minute: "2-digit",
                       second: "2-digit",

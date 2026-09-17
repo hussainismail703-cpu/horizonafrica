@@ -45,13 +45,20 @@ async function robustGoto(page, url, retries = 2) {
 }
 
 async function login(page) {
-  await robustGoto(page, `${BASE_URL}/login`);
-  await page.locator("#email").fill(TEST_EMAIL);
-  await page.locator("#password").fill(TEST_PASSWORD);
-  await page.locator("button[type='submit']").click();
-  await page.waitForURL("**/dashboard", { timeout: 15000 }).catch(() => {});
-  await page.waitForTimeout(2000);
-  return page.url().includes("/dashboard");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(1500); // let React hydrate before filling controlled inputs
+    await page.locator("#email").fill(TEST_EMAIL);
+    await page.locator("#password").fill(TEST_PASSWORD);
+    await page.locator("button[type='submit']").click();
+    await page.waitForURL("**/dashboard", { waitUntil: "domcontentloaded", timeout: 25000 }).catch(() => {});
+    if (page.url().includes("/dashboard")) {
+      await page.waitForTimeout(1000);
+      return true;
+    }
+    await page.waitForTimeout(2000);
+  }
+  return false;
 }
 
 const NAV_ITEMS = [
@@ -70,7 +77,8 @@ const NAV_ITEMS = [
 ];
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  const HEADED = process.env.HEADED === "1";
+  const browser = await chromium.launch({ headless: !HEADED, slowMo: HEADED ? 250 : 0 });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
@@ -105,11 +113,16 @@ async function run() {
 
   // 1.2 Login with valid credentials
   try {
-    await page.locator("#email").fill(TEST_EMAIL);
-    await page.locator("#password").fill(TEST_PASSWORD);
-    await page.locator("button[type='submit']").click();
-    await page.waitForURL("**/dashboard", { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(2000);
+    // Hydration race: inputs are controlled React components — filling before
+    // hydration completes gets reset. Retry fill+click once if not redirected.
+    for (let attempt = 0; attempt < 2 && !page.url().includes("/dashboard"); attempt++) {
+      await page.waitForTimeout(1500);
+      await page.locator("#email").fill(TEST_EMAIL);
+      await page.locator("#password").fill(TEST_PASSWORD);
+      await page.locator("button[type='submit']").click();
+      await page.waitForURL("**/dashboard", { waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {});
+    }
+    await page.waitForTimeout(1000);
 
     if (page.url().includes("/dashboard")) {
       const cookies = await context.cookies();
@@ -1429,12 +1442,13 @@ async function run() {
     const manageLink = page.locator("a", { hasText: "Manage" }).first();
     if (await manageLink.isVisible().catch(() => false)) {
       await manageLink.click();
-      await page.waitForTimeout(2000);
+      await page.waitForURL(/\/campaigns\/[a-f0-9-]+$/, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
       if (page.url().match(/\/campaigns\/[a-f0-9-]+$/)) {
         const enrolmentsLink = page.locator("a[href*='/enrolments']").first();
         if (await enrolmentsLink.isVisible().catch(() => false)) {
           await enrolmentsLink.click();
-          await page.waitForTimeout(2000);
+          await page.waitForURL("**/enrolments", { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+          await page.waitForTimeout(1000);
           if (page.url().includes("/enrolments")) pass("10.7 Campaign list → Detail → Enrolments works");
           else fail("10.7 Campaign → Enrolments", `Navigated to: ${page.url()}`);
         } else {
@@ -1452,11 +1466,12 @@ async function run() {
     const manageLink2 = page.locator("a", { hasText: "Manage" }).first();
     if (await manageLink2.isVisible().catch(() => false)) {
       await manageLink2.click();
-      await page.waitForTimeout(2000);
+      await page.waitForURL(/\/campaigns\/[a-f0-9-]+$/, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
       const reportLink = page.locator("a[href*='/reports/']").first();
       if (await reportLink.isVisible().catch(() => false)) {
         await reportLink.click();
-        await page.waitForTimeout(2000);
+        await page.waitForURL("**/reports/**", { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(1000);
         if (page.url().includes("/reports/")) pass("10.8 Campaign detail → Report works");
         else fail("10.8 Campaign → Report", `Navigated to: ${page.url()}`);
       } else {
@@ -1471,7 +1486,7 @@ async function run() {
     const manageLink3 = page.locator("a", { hasText: "Manage" }).first();
     if (await manageLink3.isVisible().catch(() => false)) {
       await manageLink3.click();
-      await page.waitForTimeout(2000);
+      await page.waitForURL(/\/campaigns\/[a-f0-9-]+$/, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
       const auditLink = page.locator("a[href*='/audit']").first();
       if (await auditLink.isVisible().catch(() => false)) {
         await auditLink.click();
@@ -1492,15 +1507,17 @@ async function run() {
     const manageLink4 = page.locator("a", { hasText: "Manage" }).first();
     if (await manageLink4.isVisible().catch(() => false)) {
       await manageLink4.click();
-      await page.waitForTimeout(2000);
+      await page.waitForURL(/\/campaigns\/[a-f0-9-]+$/, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
       const enrolmentsLink = page.locator("a[href*='/enrolments']").first();
       if (await enrolmentsLink.isVisible().catch(() => false)) {
         await enrolmentsLink.click();
-        await page.waitForTimeout(2000);
+        await page.waitForURL("**/enrolments", { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(1000);
         const phoneLink = page.locator("a[href*='/customers/']").first();
         if (await phoneLink.isVisible().catch(() => false)) {
           await phoneLink.click();
-          await page.waitForTimeout(2000);
+          await page.waitForURL("**/customers/**", { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+          await page.waitForTimeout(1000);
           if (page.url().includes("/customers/")) pass("10.10 Enrolments → Customer Journey works");
           else fail("10.10 Enrolments → Customer Journey", `Navigated to: ${page.url()}`);
         } else {

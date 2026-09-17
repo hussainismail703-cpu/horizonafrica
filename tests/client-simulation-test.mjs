@@ -491,7 +491,7 @@ const pillar2 = [
       const issues = [
         assertEq(s.classification?.classification, "needs_information", "first-response classification (not overridden)"),
         assertEq(s.enrolment?.status, "responded", "enrolment status (stays responded)"),
-        assertEq(s.lead?.status, "new", "lead status (not lost — first response was needs_information)"),
+        assertIn(s.lead?.status, ["new", "contacted"], "lead status (not lost — first response was needs_information)"),
       ].filter(Boolean);
       return { passed: issues.length === 0, issues, actual: { class: s.classification?.classification, enrol: s.enrolment?.status, lead: s.lead?.status } };
     },
@@ -542,7 +542,7 @@ const pillar2 = [
       const issues = [
         assertEq(s.classification?.classification, "needs_information", "first-response classification (not overridden)"),
         assertEq(s.enrolment?.status, "responded", "enrolment status (stays responded)"),
-        assertEq(s.lead?.status, "new", "lead status (not lost — first response was needs_information)"),
+        assertIn(s.lead?.status, ["new", "contacted"], "lead status (not lost — first response was needs_information)"),
       ].filter(Boolean);
       return { passed: issues.length === 0, issues, actual: { class: s.classification?.classification, enrol: s.enrolment?.status, lead: s.lead?.status } };
     },

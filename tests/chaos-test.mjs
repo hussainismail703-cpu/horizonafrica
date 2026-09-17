@@ -74,11 +74,16 @@ async function apiCall(method, path, body, headers = {}) {
 }
 
 async function loginAndGetCookies(page) {
-  await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
-  await page.locator("#email").fill(TEST_EMAIL);
-  await page.locator("#password").fill(TEST_PASSWORD);
-  await page.locator("button[type='submit']").click();
-  await page.waitForURL("**/dashboard", { timeout: 15000 }).catch(() => {});
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(1500); // let React hydrate before filling controlled inputs
+    await page.locator("#email").fill(TEST_EMAIL);
+    await page.locator("#password").fill(TEST_PASSWORD);
+    await page.locator("button[type='submit']").click();
+    await page.waitForURL("**/dashboard", { waitUntil: "domcontentloaded", timeout: 25000 }).catch(() => {});
+    if (page.url().includes("/dashboard")) return true;
+    await page.waitForTimeout(2000);
+  }
   return page.url().includes("/dashboard");
 }
 
@@ -257,9 +262,18 @@ async function run() {
     if (res.status === 201) {
       // Check if it renders as raw text (safe) or executes (unsafe)
       const createdId = res.data.id;
-      await page.goto(`${BASE_URL}/campaigns/${createdId}`, { waitUntil: "networkidle" }).catch(() => {});
-      const bodyText = await page.locator("body").textContent().catch(() => "");
-      if (bodyText?.includes("<script>")) {
+      await page.goto(`${BASE_URL}/campaigns/${createdId}`, { waitUntil: "domcontentloaded" }).catch(() => {});
+      await page.waitForTimeout(1500);
+      // Injection check: React renders {name} escaped (&lt;script&gt;), so a raw
+      // payload inside a non-script element's innerHTML = real injection.
+      // (RSC <script> payload blocks are excluded since they're script elements.)
+      const hasRawScript = await page.evaluate((pl) => {
+        if (!/<[a-zA-Z]/.test(pl)) return false;
+        return [...document.querySelectorAll("body *")].some(
+          (el) => el.tagName !== "SCRIPT" && el.innerHTML.includes(pl)
+        );
+      }, payload).catch(() => false);
+      if (hasRawScript) {
         securityFail(`XSS stored & rendered raw: "${payload.substring(0, 40)}"`, "Script tag visible in DOM");
       } else {
         pass(`XSS payload neutralized: "${payload.substring(0, 40)}"`, "React escapes by default");

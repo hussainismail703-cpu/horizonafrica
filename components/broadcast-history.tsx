@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BroadcastHistory } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 
 interface BroadcastHistoryListProps {
   history: BroadcastHistory[];
@@ -50,7 +51,7 @@ export function BroadcastHistoryList({ history, pageSize = 10 }: BroadcastHistor
                 <td className="py-3 text-on-surface-variant">{h.total_failed}</td>
                 <td className="py-3 capitalize text-on-surface-variant">{h.status}</td>
                 <td className="py-3 text-on-surface-variant">
-                  {new Date(h.created_at).toLocaleDateString()}
+                  {formatDate(h.created_at)}
                 </td>
               </tr>
             ))}

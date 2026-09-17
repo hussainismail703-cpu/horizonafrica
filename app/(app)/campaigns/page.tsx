@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { Campaign, CampaignStatus } from "@/lib/types";
+import { formatDate } from "@/lib/format";
 import Link from "next/link";
 import { Plus, Megaphone, BarChart3 } from "lucide-react";
 
@@ -12,15 +13,6 @@ const STATUS_STYLES: Record<CampaignStatus, string> = {
   completed: "bg-tertiary-container/40 text-on-tertiary",
   stopped: "bg-error-container/40 text-on-error",
 };
-
-function formatDate(d: string | null): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-ZA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default async function CampaignsPage() {
   const supabase = await createClient();

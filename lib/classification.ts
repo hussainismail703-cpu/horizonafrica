@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { normalizePhone } from "@/lib/phone-utils";
+import { withRetry, logCampaignWriteError } from "@/lib/campaign-detection";
 import {
   Classification,
   RejectionReason,
@@ -295,15 +296,23 @@ export async function classifyResponse(
   }
 
   if (interactionIdLocal) {
-    await supabase.from("campaign_classifications").insert({
-      interaction_id: interactionIdLocal,
-      phone_number: normalizePhone(phoneNumber),
-      classification: result.classification,
-      rejection_reason: result.rejection_reason ?? null,
-      confidence: result.confidence,
-      classified_by: "ai", // both keyword and AI classification are automated
-      original_ai_classification: result.classification,
-    });
+    const { error: insertErr } = await withRetry(() =>
+      supabase.from("campaign_classifications").insert({
+        interaction_id: interactionIdLocal!,
+        phone_number: normalizePhone(phoneNumber),
+        classification: result.classification,
+        rejection_reason: result.rejection_reason ?? null,
+        confidence: result.confidence,
+        classified_by: "ai", // both keyword and AI classification are automated
+        original_ai_classification: result.classification,
+      })
+    );
+    if (insertErr) {
+      await logCampaignWriteError(
+        campaignId, enrolId, phoneNumber,
+        "classification_insert_failed", insertErr.message
+      );
+    }
   }
 
   // 6. Update enrolment status based on classification + insert into calling queue
@@ -316,10 +325,18 @@ export async function classifyResponse(
 
   const outcome = enrolmentStatusMap[result.classification];
   if (outcome) {
-    await supabase
-      .from("campaign_enrolments")
-      .update({ status: outcome.status, final_outcome: outcome.final_outcome })
-      .eq("id", enrolId);
+    const { error: enrolErr } = await withRetry(() =>
+      supabase
+        .from("campaign_enrolments")
+        .update({ status: outcome.status, final_outcome: outcome.final_outcome })
+        .eq("id", enrolId)
+    );
+    if (enrolErr) {
+      await logCampaignWriteError(
+        campaignId, enrolId, phoneNumber,
+        "enrolment_status_update_failed", enrolErr.message
+      );
+    }
   }
 
   // 7. Update lead profile with campaign context
@@ -367,10 +384,18 @@ export async function classifyResponse(
       leadUpdate.status = "qualified";
     }
 
-    await supabase
-      .from("leads")
-      .update(leadUpdate)
-      .eq("id", enrolment.lead_id);
+    const { error: leadErr } = await withRetry(() =>
+      supabase
+        .from("leads")
+        .update(leadUpdate)
+        .eq("id", enrolment.lead_id!)
+    );
+    if (leadErr) {
+      await logCampaignWriteError(
+        campaignId, enrolId, phoneNumber,
+        "lead_update_failed", leadErr.message
+      );
+    }
   }
 
   // 8. Insert into calling_queue for sales-qualified leads
@@ -396,20 +421,28 @@ export async function classifyResponse(
       .maybeSingle();
 
     if (!existingQueue) {
-      await supabase.from("calling_queue").insert({
-        campaign_id: campaignId,
-        enrolment_id: enrolId,
-        phone_number: normalizePhone(phoneNumber),
-        lead_id: enrolment?.lead_id ?? null,
-        full_name: leadData?.full_name ?? null,
-        email: leadData?.email ?? null,
-        preferred_package: leadData?.preferred_package ?? null,
-        customer_request: messageText,
-        campaign_source: "Fibre Lead Re-Engagement",
-        campaign_stage: result.classification === "interested" ? "INTERESTED" : "CALLBACK REQUESTED",
-        final_outcome: outcome?.final_outcome ?? null,
-        queue_status: "pending",
-      });
+      const { error: queueErr } = await withRetry(() =>
+        supabase.from("calling_queue").insert({
+          campaign_id: campaignId,
+          enrolment_id: enrolId,
+          phone_number: normalizePhone(phoneNumber),
+          lead_id: enrolment?.lead_id ?? null,
+          full_name: leadData?.full_name ?? null,
+          email: leadData?.email ?? null,
+          preferred_package: leadData?.preferred_package ?? null,
+          customer_request: messageText,
+          campaign_source: "Fibre Lead Re-Engagement",
+          campaign_stage: result.classification === "interested" ? "INTERESTED" : "CALLBACK REQUESTED",
+          final_outcome: outcome?.final_outcome ?? null,
+          queue_status: "pending",
+        })
+      );
+      if (queueErr) {
+        await logCampaignWriteError(
+          campaignId, enrolId, phoneNumber,
+          "calling_queue_insert_failed", queueErr.message
+        );
+      }
     }
   }
 
