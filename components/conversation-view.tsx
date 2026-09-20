@@ -9,14 +9,20 @@ import { Search, X, MessageSquare, Bot, Send } from "lucide-react";
 
 interface ConversationViewProps {
   conversations: Conversation[];
+  // Live lead scores keyed by phone — conversation rows only snapshot the
+  // score at message time, so callers can pass current values to overlay.
+  leadScores?: Record<string, LeadScore>;
 }
 
 const scoreOptions: (LeadScore | "ALL")[] = ["ALL", "HOT", "WARM", "COLD"];
 
-export function ConversationView({ conversations }: ConversationViewProps) {
+export function ConversationView({ conversations, leadScores }: ConversationViewProps) {
   const [search, setSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<LeadScore | "ALL">("ALL");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+
+  const scoreOf = (c: Conversation): LeadScore =>
+    leadScores?.[c.phone_number] ?? c.lead_score;
 
   const filtered = useMemo(() => {
     return conversations.filter((c) => {
@@ -24,10 +30,10 @@ export function ConversationView({ conversations }: ConversationViewProps) {
         !search ||
         c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
         c.phone_number.includes(search);
-      const matchesScore = scoreFilter === "ALL" || c.lead_score === scoreFilter;
+      const matchesScore = scoreFilter === "ALL" || scoreOf(c) === scoreFilter;
       return matchesSearch && matchesScore;
     });
-  }, [conversations, search, scoreFilter]);
+  }, [conversations, leadScores, search, scoreFilter]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, Conversation[]>();
@@ -96,7 +102,7 @@ export function ConversationView({ conversations }: ConversationViewProps) {
                     <p className="text-sm font-semibold text-on-surface truncate">
                       {last.contact_name ?? phone}
                     </p>
-                    <ScoreBadge score={last.lead_score as LeadScore} />
+                    <ScoreBadge score={scoreOf(last)} />
                   </div>
                   <p className="mt-1 truncate text-xs text-on-surface-variant">
                     {extractMessageText(last.incoming_message) ?? extractMessageText(last.ai_response) ?? last.ai_response ?? "—"}
