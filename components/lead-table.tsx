@@ -21,12 +21,13 @@ export function LeadTable({ leads }: LeadTableProps) {
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [scoreFilter, setScoreFilter] = useState<LeadScore | "ALL">("ALL");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "ALL">("ALL");
+  const [leadList, setLeadList] = useState<Lead[]>(leads);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [page, setPage] = useState(0);
 
   const filtered = useMemo(() => {
     const phoneVariants = phoneSearchVariants(search);
-    return leads.filter((lead) => {
+    return leadList.filter((lead) => {
       const leadDigits = lead.phone_number.replace(/\D/g, "");
       const matchesSearch =
         !search ||
@@ -37,7 +38,7 @@ export function LeadTable({ leads }: LeadTableProps) {
       const matchesStatus = statusFilter === "ALL" || lead.status === statusFilter;
       return matchesSearch && matchesScore && matchesStatus;
     });
-  }, [leads, search, scoreFilter, statusFilter]);
+  }, [leadList, search, scoreFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
@@ -179,13 +180,20 @@ export function LeadTable({ leads }: LeadTableProps) {
       </div>
 
       {selectedLead && (
-        <LeadDetailDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} />
+        <LeadDetailDrawer
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onSaved={(updated) => {
+            setLeadList((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            setSelectedLead(updated);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+function LeadDetailDrawer({ lead, onClose, onSaved }: { lead: Lead; onClose: () => void; onSaved: (lead: Lead) => void }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editScore, setEditScore] = useState<LeadScore>(lead.lead_score);
@@ -193,22 +201,32 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
   const [editNotes, setEditNotes] = useState<string>(lead.notes ?? "");
   const [currentLead, setCurrentLead] = useState(lead);
 
-  async function saveLead() {
-    setSaving(true);
+  async function patchLead(body: Record<string, unknown>) {
     const res = await fetch(`/api/leads/${currentLead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lead_score: editScore,
-        status: editStatus,
-        notes: editNotes,
-      }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       const { lead: updated } = await res.json();
       setCurrentLead(updated);
+      onSaved(updated);
+      return true;
+    }
+    return false;
+  }
+
+  async function saveLead() {
+    setSaving(true);
+    if (await patchLead({ lead_score: editScore, status: editStatus, notes: editNotes })) {
       setEditing(false);
     }
+    setSaving(false);
+  }
+
+  async function unlock(field: "score_locked" | "status_locked") {
+    setSaving(true);
+    await patchLead({ [field]: false });
     setSaving(false);
   }
 
@@ -251,7 +269,7 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
               <p className="font-semibold text-on-surface">{currentLead.full_name ?? "Unknown"}</p>
               <p className="text-sm text-on-surface-variant">{currentLead.phone_number}</p>
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
               {editing ? (
                 <select
                   value={editScore}
@@ -263,7 +281,19 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
                   <option value="COLD">COLD</option>
                 </select>
               ) : (
-                <ScoreBadge score={currentLead.lead_score} />
+                <>
+                  <ScoreBadge score={currentLead.lead_score} />
+                  {currentLead.score_locked && (
+                    <button
+                      onClick={() => unlock("score_locked")}
+                      disabled={saving}
+                      title="Score was set manually — click to let the AI manage it again"
+                      className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant transition hover:bg-surface-variant"
+                    >
+                      Manual
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -297,7 +327,22 @@ function LeadDetailDrawer({ lead, onClose }: { lead: Lead; onClose: () => void }
               </>
             ) : (
               <>
-                <Field label="Status" value={currentLead.status} capitalize />
+                <div>
+                  <p className="text-xs font-medium text-on-surface-variant">Status</p>
+                  <p className="mt-0.5 flex items-center gap-2 capitalize text-on-surface">
+                    {currentLead.status}
+                    {currentLead.status_locked && (
+                      <button
+                        onClick={() => unlock("status_locked")}
+                        disabled={saving}
+                        title="Status was set manually — click to let the system manage it again"
+                        className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold normal-case text-on-surface-variant transition hover:bg-surface-variant"
+                      >
+                        Manual
+                      </button>
+                    )}
+                  </p>
+                </div>
                 <Field label="Email" value={currentLead.email} />
                 <Field label="Product Interest" value={currentLead.product_interest} />
                 <Field label="Recommended Package" value={currentLead.recommended_package} />
