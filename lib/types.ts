@@ -16,6 +16,8 @@ export interface Lead {
   internet_usage: string | null;
   lead_score: LeadScore;
   status: LeadStatus;
+  score_locked: boolean;
+  status_locked: boolean;
   notes: string | null;
   follow_up_requested: boolean | null;
   follow_up_date: string | null;

@@ -15,6 +15,15 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
+  const VALID_SCORES = ["HOT", "WARM", "COLD"];
+  const VALID_STATUSES = ["new", "contacted", "qualified", "converted", "lost"];
+  if (body.lead_score !== undefined && !VALID_SCORES.includes(body.lead_score)) {
+    return NextResponse.json({ error: "Invalid lead_score" }, { status: 400 });
+  }
+  if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
   const allowedFields = ["lead_score", "status", "full_name", "email", "notes"];
   const updates: Record<string, unknown> = {};
   for (const field of allowedFields) {
@@ -22,6 +31,15 @@ export async function PATCH(
       updates[field] = body[field];
     }
   }
+
+  // Manual edits take precedence over AI re-scoring: lock the field so the
+  // n8n workflow leaves it alone until explicitly unlocked via the flags below.
+  if (updates.lead_score !== undefined) updates.score_locked = true;
+  if (updates.status !== undefined) updates.status_locked = true;
+  for (const lock of ["score_locked", "status_locked"]) {
+    if (typeof body[lock] === "boolean") updates[lock] = body[lock];
+  }
+
   updates.updated_at = new Date().toISOString();
 
   if (Object.keys(updates).length <= 1) {
