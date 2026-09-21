@@ -11,14 +11,18 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  // "Active Conversations" = distinct phones with a message in the last 7 days.
+  // conversation_threads.created_at is the latest message time per phone.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
   const [leadsCount, hotLeadsCount, conversationsCount, broadcastsCount, recentLeads, recentConversations, allLeads] = await Promise.all([
     supabase.from("leads").select("*", { count: "exact", head: true }),
     supabase.from("leads").select("*", { count: "exact", head: true }).eq("lead_score", "HOT"),
-    supabase.from("conversations").select("*", { count: "exact", head: true }),
+    supabase.from("conversation_threads").select("*", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
     supabase.from("broadcast_history").select("*", { count: "exact", head: true }),
     supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(5),
-    supabase.from("conversations").select("*").order("created_at", { ascending: false }).limit(100),
-    supabase.from("leads").select("lead_score"),
+    supabase.from("conversation_threads").select("*").order("created_at", { ascending: false }).limit(5),
+    supabase.from("leads").select("phone_number, lead_score"),
   ]);
 
   const totalLeads = leadsCount.count ?? 0;
@@ -26,14 +30,15 @@ export default async function DashboardPage() {
   const totalConversations = conversationsCount.count ?? 0;
   const totalBroadcasts = broadcastsCount.count ?? 0;
 
-  // Rows are newest-first; keep the first (newest) row per phone so the widget
-  // shows one entry per distinct conversation.
-  const seenPhones = new Set<string>();
-  const recentChats = (recentConversations.data ?? []).filter((conv) => {
-    if (seenPhones.has(conv.phone_number)) return false;
-    seenPhones.add(conv.phone_number);
-    return true;
-  }).slice(0, 5);
+  // conversation_threads already returns one row per phone (latest message).
+  const recentChats = recentConversations.data ?? [];
+
+  // Live lead scores keyed by phone — conversation rows only snapshot the
+  // score at message time, so overlay the current value where available.
+  const liveScores = new Map<string, string>();
+  allLeads.data?.forEach((lead) => {
+    liveScores.set(lead.phone_number, lead.lead_score);
+  });
 
   const scoreCounts = { HOT: 0, WARM: 0, COLD: 0 };
   allLeads.data?.forEach((lead) => {
@@ -175,7 +180,7 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <div className="ml-3 flex flex-col items-end gap-1">
-                  <ScoreBadge score={conv.lead_score as "HOT" | "WARM" | "COLD"} />
+                  <ScoreBadge score={(liveScores.get(conv.phone_number) ?? conv.lead_score) as "HOT" | "WARM" | "COLD"} />
                   <span className="text-xs text-on-surface-variant/60">
                     {formatDate(conv.created_at)}
                   </span>
