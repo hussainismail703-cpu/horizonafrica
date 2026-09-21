@@ -20,6 +20,7 @@
 
 import { chromium } from "playwright";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { webhookHeaders } from "./lib/webhook.mjs";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -1090,7 +1091,7 @@ async function run() {
       ],
     };
 
-    const r = await apiCall("POST", "/api/whatsapp-webhook", webhookPayload);
+    const r = await apiCall("POST", "/api/whatsapp-webhook", JSON.stringify(webhookPayload), webhookHeaders(JSON.stringify(webhookPayload)));
     if (r.status === 200) pass("6.1a Webhook proxy accepts inbound payload");
     else fail("6.1a Webhook proxy", `status=${r.status}`);
 
@@ -1178,7 +1179,7 @@ async function run() {
         },
       ],
     };
-    await apiCall("POST", "/api/whatsapp-webhook", stopPayload);
+    await apiCall("POST", "/api/whatsapp-webhook", JSON.stringify(stopPayload), webhookHeaders(JSON.stringify(stopPayload)));
     await page.waitForTimeout(1500);
 
     const { data: opt } = await sb.from("opt_out_list").select("id").eq("phone", TEST_PHONE).maybeSingle();

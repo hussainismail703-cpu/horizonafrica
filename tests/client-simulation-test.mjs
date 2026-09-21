@@ -19,6 +19,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 // ─── Env loading ────────────────────────────────────────────────────────────
 function loadEnvFile(filePath) {
@@ -150,10 +151,11 @@ function interactiveWebhook(title) {
 
 // ─── Webhook sender ─────────────────────────────────────────────────────────
 async function sendWebhook(payload) {
+  const raw = JSON.stringify(payload);
   const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+    body: raw,
   });
   const text = await res.text();
   return { status: res.status, response: text };

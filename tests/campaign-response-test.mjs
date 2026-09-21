@@ -9,6 +9,8 @@
  * Usage: node --env-file=.env.local tests/campaign-response-test.mjs
  */
 
+import { webhookHeaders } from "./lib/webhook.mjs";
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PRODUCTION_URL = process.env.TEST_TARGET || "http://localhost:3000";
@@ -98,10 +100,11 @@ async function readState(enrolmentId) {
 
 // Send webhook to production
 async function sendWebhook(payload) {
+  const raw = JSON.stringify(payload);
   const res = await fetch(`${PRODUCTION_URL}/api/whatsapp-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+    body: raw,
   });
   const text = await res.text();
   return { status: res.status, response: text };

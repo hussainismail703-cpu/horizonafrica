@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -339,9 +340,10 @@ async function checkChatwoot(): Promise<ServiceCheck> {
 async function checkWebhookProxy(): Promise<ServiceCheck> {
   const start = Date.now();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dashboard.horizonafrica.co.za";
+  const verifyToken = process.env.META_VERIFY_TOKEN ?? "horizon_africa_verify_2026";
 
   try {
-    const res = await fetch(`${baseUrl}/api/whatsapp-webhook?hub.mode=subscribe&hub.verify_token=horizon_africa_verify_2026&hub.challenge=healthcheck`, {
+    const res = await fetch(`${baseUrl}/api/whatsapp-webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(verifyToken)}&hub.challenge=healthcheck`, {
       signal: AbortSignal.timeout(8000),
     });
 
@@ -368,6 +370,57 @@ async function checkWebhookProxy(): Promise<ServiceCheck> {
       status: "down",
       latencyMs: Date.now() - start,
       message: err instanceof Error ? err.message : "Request failed",
+    };
+  }
+}
+
+const SCHEDULER_STALE_MS = 35 * 60 * 1000; // process runs every 15min; 35min = missed twice
+
+async function checkScheduler(): Promise<ServiceCheck> {
+  try {
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
+      .from("system_heartbeats")
+      .select("last_run_at")
+      .eq("name", "campaign_process")
+      .maybeSingle();
+
+    if (error) {
+      return {
+        name: "Campaign Scheduler",
+        status: "degraded",
+        latencyMs: null,
+        message: `Heartbeat check failed: ${error.message}`,
+      };
+    }
+    if (!data) {
+      return {
+        name: "Campaign Scheduler",
+        status: "degraded",
+        latencyMs: null,
+        message: "No heartbeat recorded — process endpoint has not run since deploy",
+      };
+    }
+
+    const ageMs = Date.now() - new Date(data.last_run_at).getTime();
+    const ageMin = Math.round(ageMs / 60000);
+    const stale = ageMs > SCHEDULER_STALE_MS;
+
+    return {
+      name: "Campaign Scheduler",
+      status: stale ? "degraded" : "healthy",
+      latencyMs: null,
+      message: stale
+        ? `Last run ${ageMin}min ago — scheduler may be down`
+        : `Last run ${ageMin}min ago`,
+      details: { lastRunAt: data.last_run_at, ageMinutes: ageMin },
+    };
+  } catch (err) {
+    return {
+      name: "Campaign Scheduler",
+      status: "degraded",
+      latencyMs: null,
+      message: err instanceof Error ? err.message : "Heartbeat check failed",
     };
   }
 }
@@ -422,6 +475,7 @@ export async function GET() {
       checkOpenRouter(),
       checkChatwoot(),
       checkWebhookProxy(),
+      checkScheduler(),
     ]),
     checkRecentErrors(),
   ]);

@@ -33,3 +33,4 @@ workflow-inbound-ai-v2-backup-*.json
 tests/screenshots/
 tests/test-results.json
 tests/*-results.json
+backups/

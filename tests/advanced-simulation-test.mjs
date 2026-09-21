@@ -27,6 +27,7 @@ import path from "path";
 import crypto from "crypto";
 import { chromium } from "playwright";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 // ─── Env loading ────────────────────────────────────────────────────────────
 function loadEnvFile(filePath) {
@@ -271,10 +272,11 @@ function textNoBodyWebhook(fromPhone) {
 
 // ─── Webhook sender ─────────────────────────────────────────────────────────
 async function sendWebhook(payload) {
+  const raw = JSON.stringify(payload);
   const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+    body: raw,
   });
   const text = await res.text();
   return { status: res.status, response: text };
@@ -617,14 +619,16 @@ const pillar1 = [
   },
   {
     id: "F5",
-    desc: "Button reply with empty text → no_response/uncertain",
+    desc: "Button reply with empty text → stays active, no classification",
     run: async () => {
       const eid = await resetAndCreateEnrolment();
       await sendAndWait(buttonWebhook(TEST_PHONE, ""));
       const s = await readState(eid);
+      // Empty body is not a real reply: interaction is recorded for audit but
+      // the enrolment stays active and classification is skipped.
       const issues = [
-        assertEq(s.enrolment?.status, "responded", "enrolment responded"),
-        assertIn(s.classification?.classification, ["uncertain", "no_response", "other"], "classification"),
+        assertEq(s.enrolment?.status, "active", "enrolment stays active"),
+        assertEq(!!s.classification, false, "no classification"),
       ].filter(Boolean);
       return { passed: issues.length === 0, issues, actual: { enrol: s.enrolment?.status, class: s.classification?.classification } };
     },
@@ -646,14 +650,14 @@ const pillar1 = [
   },
   {
     id: "F7",
-    desc: "Text message with no body field → no_response/uncertain",
+    desc: "Text message with no body field → stays active, no classification",
     run: async () => {
       const eid = await resetAndCreateEnrolment();
       await sendAndWait(textNoBodyWebhook(TEST_PHONE));
       const s = await readState(eid);
       const issues = [
-        assertIn(s.enrolment?.status, ["responded", "active"], "enrolment status"),
-        assertIn(s.classification?.classification, ["uncertain", "no_response", "other"], "classification"),
+        assertEq(s.enrolment?.status, "active", "enrolment stays active"),
+        assertEq(!!s.classification, false, "no classification"),
       ].filter(Boolean);
       return { passed: issues.length === 0, issues, actual: { enrol: s.enrolment?.status, class: s.classification?.classification } };
     },

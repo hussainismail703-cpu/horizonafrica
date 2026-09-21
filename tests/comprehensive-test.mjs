@@ -16,6 +16,7 @@
 
 import { chromium } from "playwright";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { webhookHeaders } from "./lib/webhook.mjs";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -603,10 +604,11 @@ async function pillar2(browser) {
   // 2G: SSRF prevention on webhook proxy
   console.log("\n-- Module 2G: SSRF prevention --");
   {
+    const raw = JSON.stringify({ object: "whatsapp_business_account", entry: [] });
     const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ object: "whatsapp_business_account", entry: [] }),
+      headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+      body: raw,
     });
     if (res.status === 200 || res.status === 502) pass("Webhook proxy rejects/forward only to configured n8n endpoint");
     else pass(`Webhook proxy returned ${res.status} (acceptable if not exploited)`);
@@ -803,10 +805,11 @@ async function pillar3(browser) {
       }],
     };
 
+    const raw = JSON.stringify(webhookBody);
     const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(webhookBody),
+      headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+      body: raw,
     });
     await new Promise((r) => setTimeout(r, 2000));
 
@@ -1108,10 +1111,11 @@ async function pillar3(browser) {
       }],
     };
 
+    const raw = JSON.stringify(webhookBody);
     const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(webhookBody),
+      headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+      body: raw,
     });
     await new Promise((r) => setTimeout(r, 2000));
 
