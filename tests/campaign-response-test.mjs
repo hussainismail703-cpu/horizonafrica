@@ -115,11 +115,11 @@ function webhook(text) {
   return { entry: [{ changes: [{ value: { messages: [{ from: TEST_PHONE, text: { body: text } }] } }] }] };
 }
 function buttonWebhook(text) {
-  const msg = { from: TEST_PHONE, button: { text: text } };
+  const msg = { from: TEST_PHONE, id: `wamid.test-${Date.now()}-${Math.random().toString(36).slice(2)}-btn`, type: "button", button: { text: text } };
   return { entry: [{ changes: [{ value: { messages: [msg] } }] }] };
 }
 function interactiveWebhook(title) {
-  const msg = { from: TEST_PHONE, interactive: { button_reply: { title: title } } };
+  const msg = { from: TEST_PHONE, id: `wamid.test-${Date.now()}-${Math.random().toString(36).slice(2)}-int`, type: "interactive", interactive: { type: "button_reply", button_reply: { title: title } } };
   return { entry: [{ changes: [{ value: { messages: [msg] } }] }] };
 }
 
@@ -246,7 +246,10 @@ const tests = [
   { id: "A20", desc: "Call me back", input: "Call me back", payload: webhook("Call me back"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
   { id: "A21", desc: "I'd like to speak to a consultant", input: "I'd like to speak to a consultant", payload: webhook("I'd like to speak to a consultant"), expect: { class: "callback_requested", enrol: "callback_requested", queue: true, lead: "qualified" } },
   { id: "A22", desc: "xyzabc123 (gibberish)", input: "xyzabc123", payload: webhook("xyzabc123"), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
-  { id: "A23", desc: "(empty message)", input: "", payload: webhook(""), expect: { class: "uncertain_or_ai", enrol: "responded", queue: false, lead: ["new", "contacted"] } },
+  // Empty body is recorded as an inbound interaction for audit but must NOT
+  // mark the enrolment responded or classify — a content-free webhook must not
+  // suppress remaining campaign sends.
+  { id: "A23", desc: "(empty message — audited, not a reply)", input: "", payload: webhook(""), expect: { class: null, enrol: "active", queue: false, lead: ["new", "contacted"] } },
 
   // Group B — Step 2 Numbered Menu
   { id: "B1", desc: "1 (more info)", input: "1", payload: webhook("1"), expect: { class: "needs_information", enrol: "responded", queue: false, lead: ["new", "contacted"] } },

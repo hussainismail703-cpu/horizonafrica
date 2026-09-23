@@ -794,14 +794,18 @@ const pillar3 = [
 const pillar4 = [
   {
     id: "T1",
-    desc: "Empty message",
+    desc: "Empty message (audited, not treated as a reply)",
     run: async () => {
       const eid = await resetAndCreateEnrolment();
       await sendAndWait(webhook(""));
       const s = await readState(eid);
+      // Webhook hardening: an empty body is recorded as an inbound interaction
+      // for audit but does NOT mark the enrolment responded or classify — a
+      // content-free webhook must not suppress campaign sends.
       const issues = [
-        assertEq(s.enrolment?.status, "responded", "enrolment responded"),
-        assertIn(s.classification?.classification, ["uncertain", "no_response", "other"], "classification"),
+        assertEq(s.enrolment?.status, "active", "enrolment stays active"),
+        assertEq(s.classification, undefined, "no classification"),
+        assertEq(s.interactions?.length, 1, "interaction recorded"),
       ].filter(Boolean);
       return { passed: issues.length === 0, issues, actual: { enrol: s.enrolment?.status, class: s.classification?.classification } };
     },
