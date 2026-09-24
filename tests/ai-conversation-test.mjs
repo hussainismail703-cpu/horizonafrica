@@ -1061,9 +1061,12 @@ const pillar9 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      // Should recognize apply intent and start process
-      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "consultant"])) issues.push("Response doesn't start application process for Afrikaans apply");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasApply: containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "consultant"]) } };
+      // Should recognize apply intent and start process. The AI may reply in
+      // Afrikaans (aansoek=application, pakket=package, stuur=send,
+      // adres=address, konsultant=consultant, besonderhede=details).
+      const applyKw = ["apply", "package", "people", "address", "help", "consultant", "aansoek", "pakket", "stuur", "adres", "konsultant", "besonderhede"];
+      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, applyKw)) issues.push("Response doesn't start application process for Afrikaans apply");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasApply: containsAny(resp.ai_response, applyKw) } };
     },
   },
   {
