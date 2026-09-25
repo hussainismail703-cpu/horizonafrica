@@ -34,6 +34,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import readline from "readline";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 // ─── Env loading (fallback for environments without --env-file) ─────────────
 function loadEnvFile(filePath) {
@@ -462,7 +463,8 @@ async function step2SendStep1(campaign) {
 // ═════════════════════════════════════════════════════════════════════════════
 async function sendInboundWebhook(messageBody) {
   const payload = metaWebhookPayload(TEST_PHONE, messageBody);
-  const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+  const raw = JSON.stringify(payload);
+  const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: raw, headers: webhookHeaders(raw) });
   return res;
 }
 

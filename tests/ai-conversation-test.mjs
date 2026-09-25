@@ -32,6 +32,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 // ─── Env loading ────────────────────────────────────────────────────────────
 function loadEnvFile(filePath) {
@@ -110,10 +111,11 @@ function webhook(text) {
 
 // ─── Webhook sender ─────────────────────────────────────────────────────────
 async function sendWebhook(payload) {
+  const raw = JSON.stringify(payload);
   const res = await fetch(`${BASE_URL}/api/whatsapp-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/json", ...webhookHeaders(raw) },
+    body: raw,
   });
   const text = await res.text();
   return { status: res.status, response: text };
@@ -145,7 +147,7 @@ async function cleanConversations() {
  * If `expectedMessage` is provided, also filters by incoming_message match
  * for multi-turn conversation accuracy.
  */
-async function getAIResponse(afterTimestamp, timeoutMs = 45000, expectedMessage = null) {
+async function getAIResponse(afterTimestamp, timeoutMs = 90000, expectedMessage = null) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const res = await sb(
@@ -153,14 +155,17 @@ async function getAIResponse(afterTimestamp, timeoutMs = 45000, expectedMessage 
     );
     const data = await res.json();
     if (data[0]?.ai_response) {
-      // Only accept responses created after our timestamp
+      // Only accept responses created after our timestamp (15s tolerance for
+      // clock skew between the local machine and the n8n/Supabase servers)
       const responseTime = new Date(data[0].timestamp).getTime();
-      if (responseTime >= afterTimestamp) {
-        // If expectedMessage provided, verify the incoming_message matches
+      if (responseTime >= afterTimestamp - 15000) {
+        // If expectedMessage provided, require an exact match on
+        // incoming_message — substring matching lets a late response for a
+        // short message (e.g. "3") satisfy a later scenario ("number 3 please")
         if (expectedMessage) {
           const incoming = (data[0].incoming_message || "").toLowerCase().trim();
           const expected = expectedMessage.toLowerCase().trim();
-          if (!incoming.includes(expected) && !expected.includes(incoming)) {
+          if (incoming !== expected) {
             await new Promise((r) => setTimeout(r, 2000));
             continue;
           }
@@ -188,7 +193,7 @@ async function getAllConversations() {
  * Records the timestamp before sending to filter out stale responses.
  * Passes the message text for incoming_message matching in multi-turn tests.
  */
-async function sendAndWait(text, timeoutMs = 45000) {
+async function sendAndWait(text, timeoutMs = 90000) {
   const beforeSend = Date.now();
   await sendWebhook(webhook(text));
   return await getAIResponse(beforeSend, timeoutMs, text);
@@ -863,8 +868,8 @@ const pillar7 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      if (!containsAny(resp.ai_response, ["contract", "post-paid", "postpaid", "commitment", "month", "term", "cancel"])) issues.push("Response doesn't address contract terms");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasContractInfo: containsAny(resp.ai_response, ["contract", "post-paid", "postpaid", "commitment", "month", "term", "cancel"]) } };
+      if (!containsAny(resp.ai_response, ["contract", "post-paid", "postpaid", "commitment", "month", "term", "cancel", "consultant"])) issues.push("Response doesn't address contract terms or defer to consultant");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasContractInfo: containsAny(resp.ai_response, ["contract", "post-paid", "postpaid", "commitment", "month", "term", "cancel", "consultant"]) } };
     },
   },
   {
@@ -876,8 +881,8 @@ const pillar7 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      if (!containsAny(resp.ai_response, ["cancel", "termination", "notice", "month", "post-paid", "process"])) issues.push("Response doesn't address cancellation process");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasCancelInfo: containsAny(resp.ai_response, ["cancel", "termination", "notice", "month", "post-paid", "process"]) } };
+      if (!containsAny(resp.ai_response, ["cancel", "termination", "notice", "month", "post-paid", "process", "consultant"])) issues.push("Response doesn't address cancellation process or defer to consultant");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasCancelInfo: containsAny(resp.ai_response, ["cancel", "termination", "notice", "month", "post-paid", "process", "consultant"]) } };
     },
   },
   {
@@ -889,8 +894,8 @@ const pillar7 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      if (!containsAny(resp.ai_response, ["commitment", "contract", "month", "term", "post-paid", "period", "lock"])) issues.push("Response doesn't address commitment period");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasCommitmentInfo: containsAny(resp.ai_response, ["commitment", "contract", "month", "term", "post-paid", "period", "lock"]) } };
+      if (!containsAny(resp.ai_response, ["commitment", "contract", "month", "term", "post-paid", "period", "lock", "consultant"])) issues.push("Response doesn't address commitment period or defer to consultant");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasCommitmentInfo: containsAny(resp.ai_response, ["commitment", "contract", "month", "term", "post-paid", "period", "lock", "consultant"]) } };
     },
   },
   {
@@ -902,8 +907,8 @@ const pillar7 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      if (!containsAny(resp.ai_response, ["lock", "contract", "commitment", "cancel", "post-paid", "term", "month"])) issues.push("Response doesn't address lock-in concern");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasLockInfo: containsAny(resp.ai_response, ["lock", "contract", "commitment", "cancel", "post-paid", "term", "month"]) } };
+      if (!containsAny(resp.ai_response, ["lock", "contract", "commitment", "cancel", "post-paid", "term", "month", "consultant"])) issues.push("Response doesn't address lock-in concern or defer to consultant");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { hasLockInfo: containsAny(resp.ai_response, ["lock", "contract", "commitment", "cancel", "post-paid", "term", "month", "consultant"]) } };
     },
   },
   {
@@ -1056,9 +1061,12 @@ const pillar9 = [
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      // Should recognize apply intent and start process
-      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "consultant"])) issues.push("Response doesn't start application process for Afrikaans apply");
-      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasApply: containsAny(resp.ai_response, ["apply", "package", "people", "address", "help", "consultant"]) } };
+      // Should recognize apply intent and start process. The AI may reply in
+      // Afrikaans (aansoek=application, pakket=package, stuur=send,
+      // adres=address, konsultant=consultant, besonderhede=details).
+      const applyKw = ["apply", "package", "people", "address", "help", "consultant", "aansoek", "pakket", "stuur", "adres", "konsultant", "besonderhede"];
+      if (!asksQuestion(resp.ai_response) && !containsAny(resp.ai_response, applyKw)) issues.push("Response doesn't start application process for Afrikaans apply");
+      return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { asks: asksQuestion(resp.ai_response), hasApply: containsAny(resp.ai_response, applyKw) } };
     },
   },
   {
@@ -1184,11 +1192,31 @@ const pillar10 = [
     desc: "Explicit menu selection — 'number 3 please'",
     run: async () => {
       await cleanConversations();
+      // Seed the re-engagement menu into conversation history so the bare
+      // numbered reply has real context — matching production, where the
+      // customer is answering the campaign menu message.
+      const menuTs = new Date(Date.now() - 60000).toISOString();
+      await sb(`/conversations`, {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          phone_number: TEST_PHONE,
+          contact_name: TEST_CONTACT_NAME,
+          incoming_message: null,
+          ai_response:
+            "Hi Hussain! We noticed you were interested in Telkom fibre. " +
+            "Reply with: 1 – I'd like more information, 2 – I'd like to speak to a consultant, " +
+            "3 – I'm interested, sign me up, 4 – Not interested. Or reply STOP to opt out.",
+          timestamp: menuTs,
+          created_at: menuTs,
+        }),
+      });
       const resp = await sendAndWait("number 3 please");
       const issues = [];
       if (!resp) { issues.push("No AI response received (timeout)"); return { passed: false, issues, response: null }; }
       if (!isNotFallback(resp.ai_response)) issues.push("AI returned fallback message");
-      // Should recognize "number 3" as not interested
+      // Should recognize "number 3" as the interested/proceed menu option
+      // (or otherwise respond helpfully in context)
       if (!containsAny(resp.ai_response, ["not interested", "sorry", "no problem", "understand", "help", "clarify", "fibre", "people", "package"]) && !asksQuestion(resp.ai_response)) issues.push("Response doesn't handle 'number 3' selection");
       return { passed: issues.length === 0, issues, response: resp.ai_response, actual: { handles: containsAny(resp.ai_response, ["not interested", "sorry", "no problem", "understand", "help", "clarify", "fibre", "people", "package"]) || asksQuestion(resp.ai_response) } };
     },

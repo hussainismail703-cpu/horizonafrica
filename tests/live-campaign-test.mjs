@@ -35,6 +35,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import readline from "readline";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 // ─── Env loading ────────────────────────────────────────────────────────────
 function loadEnvFile(filePath) {
@@ -189,7 +190,8 @@ function metaWebhookPayload(fromPhone, messageBody, messageId) {
 
 async function sendInboundWebhook(messageBody) {
   const payload = metaWebhookPayload(TEST_PHONE, messageBody);
-  return http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+  const raw = JSON.stringify(payload);
+  return http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: raw, headers: webhookHeaders(raw) });
 }
 
 // ─── Database helpers ───────────────────────────────────────────────────────

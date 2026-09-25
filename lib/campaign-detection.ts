@@ -59,7 +59,9 @@ export async function logCampaignWriteError(
  */
 export async function detectAndMarkCampaignResponse(
   phoneNumber: string,
-  messageBody: string | null
+  messageBody: string | null,
+  metaMessageId: string | null = null,
+  contentType: string | null = null
 ): Promise<EnrolmentDetection | null> {
   const supabase = createServiceClient();
   const phone = normalizePhone(phoneNumber);
@@ -80,7 +82,7 @@ export async function detectAndMarkCampaignResponse(
 
   const isStop = messageBody ? STOP_PATTERN.test(messageBody.trim()) : false;
 
-  // Record the inbound interaction (always, even for STOP)
+  // Record the inbound interaction (always, even for STOP or empty bodies)
   const { error: interactionErr } = await supabase.from("campaign_interactions").insert({
     campaign_id: enrolment.campaign_id,
     enrol_id: enrolment.id,
@@ -90,7 +92,8 @@ export async function detectAndMarkCampaignResponse(
     template_name: null,
     message_body: messageBody,
     delivery_status: "delivered",
-    meta_message_id: null,
+    meta_message_id: metaMessageId,
+    content_type: contentType,
   });
   if (interactionErr) {
     await logCampaignWriteError(
@@ -159,6 +162,18 @@ export async function detectAndMarkCampaignResponse(
     };
   }
 
+  // An empty body (e.g. a text message with no text) is not a real reply —
+  // the interaction is recorded above for audit but the enrolment stays active
+  // so campaign steps are not suppressed by a content-free webhook.
+  if (!messageBody || !messageBody.trim()) {
+    return {
+      enrolment_id: enrolment.id,
+      campaign_id: enrolment.campaign_id,
+      phone_number: phone,
+      stop_detected: false,
+    };
+  }
+
   // Normal response — mark as 'responded' to stop further campaign messages.
   // If the enrolment was no_response_final (late response after grace period),
   // clear nurture_flag and final_outcome since the customer did respond.
@@ -204,33 +219,110 @@ export async function isOptedOut(phoneNumber: string): Promise<boolean> {
   return !!data;
 }
 
+export interface InboundMessage {
+  phoneNumber: string;
+  messageBody: string;
+  messageType: string;
+  metaMessageId: string | null;
+}
+
+interface MetaWebhookMessage {
+  from: string;
+  id?: string;
+  type?: string;
+  text?: { body?: string };
+  button?: { text?: string };
+  interactive?: {
+    type?: string;
+    button_reply?: { title?: string };
+    list_reply?: { title?: string };
+  };
+  image?: { caption?: string };
+  video?: { caption?: string };
+  document?: { caption?: string; filename?: string };
+  audio?: Record<string, unknown>;
+  sticker?: Record<string, unknown>;
+  location?: { latitude?: number; longitude?: number; name?: string; address?: string };
+  contacts?: Array<{ name?: { formatted_name?: string }; phones?: Array<{ phone?: string }> }>;
+  reaction?: { emoji?: string };
+}
+
 /**
- * Extract the phone number and message text from a Meta WhatsApp webhook payload.
+ * Extract the phone number, message text, type and Meta message id from a
+ * WhatsApp webhook payload. Non-text messages produce a descriptive body so
+ * detection, classification and the AI flow can see what arrived — e.g. a
+ * customer pinning their address as a location becomes readable text.
+ * A message with no extractable content returns an empty messageBody; callers
+ * must not treat that as a real reply.
  */
-export function extractInboundMessage(
-  payload: unknown
-): { phoneNumber: string; messageBody: string } | null {
+export function extractInboundMessage(payload: unknown): InboundMessage | null {
   try {
-    const entry = (payload as { entry?: Array<{ changes?: Array<{ value?: { messages?: Array<{ from: string; text?: { body: string }; button?: { text?: string }; interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } }> } }> }> })?.entry?.[0];
+    const entry = (payload as { entry?: Array<{ changes?: Array<{ value?: { messages?: MetaWebhookMessage[] } }> }> })?.entry?.[0];
     const message = entry?.changes?.[0]?.value?.messages?.[0];
     if (!message || !message.from) return null;
 
     const phoneNumber = message.from;
-    let messageBody = message.text?.body ?? "";
+    const messageType = message.type ?? "text";
+    const metaMessageId = message.id ?? null;
+    let messageBody = "";
 
-    // Handle button replies
-    if (!messageBody && message.button?.text) {
-      messageBody = message.button.text;
-    }
-    // Handle interactive replies
-    if (!messageBody && message.interactive?.button_reply?.title) {
-      messageBody = message.interactive.button_reply.title;
-    }
-    if (!messageBody && message.interactive?.list_reply?.title) {
-      messageBody = message.interactive.list_reply.title;
+    switch (messageType) {
+      case "text":
+        messageBody = message.text?.body ?? "";
+        break;
+      case "button":
+        messageBody = message.button?.text ?? "[Button]";
+        break;
+      case "interactive":
+        messageBody =
+          message.interactive?.button_reply?.title ??
+          message.interactive?.list_reply?.title ??
+          "[Interactive reply]";
+        break;
+      case "image":
+        messageBody = `[Image]${message.image?.caption ? ` ${message.image.caption}` : ""}`;
+        break;
+      case "video":
+        messageBody = `[Video]${message.video?.caption ? ` ${message.video.caption}` : ""}`;
+        break;
+      case "document":
+        messageBody = `[Document]${message.document?.caption ? ` ${message.document.caption}` : message.document?.filename ? ` ${message.document.filename}` : ""}`;
+        break;
+      case "audio":
+        messageBody = "[Voice note]";
+        break;
+      case "voice":
+        messageBody = "[Voice note]";
+        break;
+      case "sticker":
+        messageBody = "[Sticker]";
+        break;
+      case "location": {
+        const loc = message.location ?? {};
+        const parts = ["[Location]"];
+        if (loc.name) parts.push(loc.name);
+        if (loc.address) parts.push(loc.address);
+        if (loc.latitude != null && loc.longitude != null) {
+          parts.push(`(${loc.latitude}, ${loc.longitude})`);
+        }
+        messageBody = parts.join(" ");
+        break;
+      }
+      case "contacts": {
+        const contact = message.contacts?.[0];
+        const name = contact?.name?.formatted_name ?? "";
+        const phone = contact?.phones?.[0]?.phone ?? "";
+        messageBody = `[Contact]${name ? ` ${name}` : ""}${phone ? ` ${phone}` : ""}`;
+        break;
+      }
+      case "reaction":
+        messageBody = `[Reaction]${message.reaction?.emoji ? ` ${message.reaction.emoji}` : ""}`;
+        break;
+      default:
+        messageBody = `[Message: ${messageType}]`;
     }
 
-    return { phoneNumber, messageBody };
+    return { phoneNumber, messageBody, messageType, metaMessageId };
   } catch {
     return null;
   }

@@ -25,6 +25,7 @@
  */
 
 import { chromium } from "playwright";
+import { webhookHeaders } from "./lib/webhook.mjs";
 
 const BASE_URL = "http://localhost:3000";
 const TEST_EMAIL = "test@horizonafrica.co.za";
@@ -666,14 +667,24 @@ async function run() {
       }],
     }],
   };
+  // Unsigned POSTs are rejected when signature enforcement is on — that IS the
+  // hardening fix, so 401 is the desired outcome here.
   const spoofRes = await apiCall("POST", "/api/whatsapp-webhook", spoofedPayload, {});
   if (spoofRes.status === 500) fail("Spoofed webhook payload", "500 error");
+  else if (spoofRes.status === 401) pass("Spoofed webhook rejected (unsigned)", "401 invalid signature");
   else pass("Spoofed webhook handled", `status ${spoofRes.status}`);
 
-  // Malformed webhook payload
+  // Malformed webhook payload (unsigned)
   const malformedWebhookRes = await apiCall("POST", "/api/whatsapp-webhook", { garbage: true }, {});
   if (malformedWebhookRes.status === 500) fail("Malformed webhook", "500 error");
+  else if (malformedWebhookRes.status === 401) pass("Malformed webhook rejected (unsigned)", "401 invalid signature");
   else pass("Malformed webhook handled", `status ${malformedWebhookRes.status}`);
+
+  // Signed malformed payload — passes signature check, must not 500 downstream
+  const garbageRaw = JSON.stringify({ garbage: true });
+  const signedMalformedRes = await apiCall("POST", "/api/whatsapp-webhook", garbageRaw, webhookHeaders(garbageRaw));
+  if (signedMalformedRes.status === 500) fail("Signed malformed webhook", "500 error");
+  else pass("Signed malformed webhook handled", `status ${signedMalformedRes.status}`);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 16. UI FORM CHAOS

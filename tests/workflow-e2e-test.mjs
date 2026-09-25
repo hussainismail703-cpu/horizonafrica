@@ -27,6 +27,7 @@
 
 import { chromium } from "playwright";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { webhookHeaders } from "./lib/webhook.mjs";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -127,6 +128,12 @@ async function http(method, url, { body, headers = {}, rawBody } = {}) {
 
 async function apiCall(method, path, { body, headers = {} } = {}) {
   return http(method, `${BASE_URL}${path}`, { body, headers });
+}
+
+// Signed POST to /api/whatsapp-webhook (X-Hub-Signature-256 like Meta sends)
+async function sendSignedWebhook(payload) {
+  const raw = JSON.stringify(payload);
+  return http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: raw, headers: webhookHeaders(raw) });
 }
 
 // ─── Supabase service client ────────────────────────────────────────────────
@@ -380,7 +387,7 @@ async function phase1() {
     await cleanupOptOut(TEST_PHONE);
 
     const payload = metaWebhookPayload(TEST_PHONE, "Hi, I am interested in getting uncapped fibre for my home in Durban");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) {
       pass("Webhook proxy forwards sales query to n8n", `status=${res.status}`);
     } else {
@@ -411,7 +418,7 @@ async function phase1() {
       TEST_PHONE,
       "I want to sign up for the 50Mbps Telkom Fibre package today, my email is hussainismail703@gmail.com"
     );
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) {
       pass("Hot-lead message forwarded to n8n", `status=${res.status}`);
     } else {
@@ -426,7 +433,7 @@ async function phase1() {
   console.log("\n-- Test 1.4: Human Handover / Escalation Trigger --");
   {
     const payload = metaWebhookPayload(TEST_PHONE, "I need to speak to a human manager urgently, this is a complaint");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) {
       pass("Escalation message forwarded to n8n", `status=${res.status}`);
     } else {
@@ -599,7 +606,7 @@ async function phase3() {
   {
     await resetEnrolment();
     const payload = metaWebhookPayload(TEST_PHONE, "FIBRE");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) pass("Interested webhook accepted", `status=${res.status}`);
     else fail("Interested webhook accepted", `status=${res.status}`);
 
@@ -631,7 +638,7 @@ async function phase3() {
   {
     await resetEnrolment();
     const payload = metaWebhookPayload(TEST_PHONE, "2 - Please have a consultant call me");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) pass("Callback webhook accepted", `status=${res.status}`);
     else fail("Callback webhook accepted", `status=${res.status}`);
 
@@ -656,7 +663,7 @@ async function phase3() {
   {
     await resetEnrolment();
     const payload = metaWebhookPayload(TEST_PHONE, "4 - Not interested, price is too high");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) pass("Not-interested webhook accepted", `status=${res.status}`);
     else fail("Not-interested webhook accepted", `status=${res.status}`);
 
@@ -688,7 +695,7 @@ async function phase3() {
     await resetEnrolment();
     await cleanupOptOut(TEST_PHONE);
     const payload = metaWebhookPayload(TEST_PHONE, "STOP");
-    const res = await http("POST", `${BASE_URL}/api/whatsapp-webhook`, { rawBody: JSON.stringify(payload) });
+    const res = await sendSignedWebhook(payload);
     if (res.status === 200) pass("STOP webhook accepted", `status=${res.status}`);
     else fail("STOP webhook accepted", `status=${res.status}`);
 

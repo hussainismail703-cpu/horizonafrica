@@ -195,6 +195,7 @@ export interface CampaignInteraction {
   delivery_status: DeliveryStatus;
   meta_message_id: string | null;
   meta_error: string | null;
+  content_type: string | null;
   occurred_at: string;
   created_at: string;
 }
