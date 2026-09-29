@@ -55,8 +55,8 @@ export function ConversationView({ conversations, leadScores }: ConversationView
 
   return (
     <div className="flex h-[calc(100vh-180px)] gap-4">
-      {/* Conversation List Pane */}
-      <div className="flex w-full flex-col rounded-xl border border-surface-variant bg-surface-container-lowest lg:w-[340px] lg:shrink-0">
+      {/* Conversation List Pane — hidden on mobile once a chat is open */}
+      <div className={`w-full flex-col rounded-xl border border-surface-variant bg-surface-container-lowest lg:flex lg:w-[340px] lg:shrink-0 ${selectedPhone ? "hidden" : "flex"}`}>
         <div className="border-b border-outline-variant/30 p-4">
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant/50" />
@@ -121,8 +121,8 @@ export function ConversationView({ conversations, leadScores }: ConversationView
         </div>
       </div>
 
-      {/* Chat Window Pane */}
-      <div className="hidden flex-1 flex-col rounded-xl border border-surface-variant bg-surface-container-lowest lg:flex">
+      {/* Chat Window Pane — full-width on mobile when a chat is open */}
+      <div className={`flex-1 flex-col rounded-xl border border-surface-variant bg-surface-container-lowest lg:flex ${selectedPhone ? "flex" : "hidden"}`}>
         {selectedPhone ? (
           <div className="flex h-full flex-col">
             {/* Chat Header */}
@@ -138,8 +138,13 @@ export function ConversationView({ conversations, leadScores }: ConversationView
                   <p className="text-xs text-on-surface-variant">{selectedPhone}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedPhone(null)} className="text-on-surface-variant hover:text-on-surface">
+              <button
+                onClick={() => setSelectedPhone(null)}
+                className="flex items-center gap-1 text-on-surface-variant hover:text-on-surface"
+                aria-label="Back to conversations"
+              >
                 <X className="h-5 w-5" />
+                <span className="text-xs lg:hidden">Back</span>
               </button>
             </div>
 
