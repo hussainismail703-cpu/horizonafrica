@@ -209,8 +209,22 @@ async function run() {
   // ===========================================================================
   console.log("\n=== SECTION 3: CAMPAIGN DETAIL PAGE ===");
 
-  // Fallback: the real Fibre Lead Re-Engagement campaign (survives DB cleanup)
-  const campaignId = testCampaignId || "febe1cac-cf87-46c3-bbc7-160d3b96e28e";
+  // Fallback: create an isolated throwaway campaign via the API.
+  // NEVER fall back to the real Fibre campaign — an earlier version did that,
+  // and the mutation tests wiped its template_parameters and renamed it.
+  let campaignId = testCampaignId;
+  let fallbackCampaignId = null;
+  if (!campaignId) {
+    try {
+      const res = await page.context().request.post(`${BASE_URL}/api/campaigns`, {
+        data: { name: `Detail Fallback Campaign ${Date.now()}`, objective: "isolated detail-page test campaign" },
+      });
+      const body = await res.json().catch(() => null);
+      campaignId = body?.id ?? null;
+      fallbackCampaignId = campaignId;
+      if (campaignId) console.log(`  (created isolated fallback campaign: ${campaignId})`);
+    } catch {}
+  }
 
   try {
     await robustGoto(page, `${BASE_URL}/campaigns/${campaignId}`);
@@ -754,6 +768,14 @@ async function run() {
   } catch (err) {
     fail("Responsive/edge cases", err.message, await screenshot(page, "10-error").catch(() => {}));
   }
+
+  // ===========================================================================
+  // CLEANUP — delete campaigns created by this suite (drafts are deletable)
+  // ===========================================================================
+  for (const id of [testCampaignId, fallbackCampaignId].filter(Boolean)) {
+    await page.context().request.delete(`${BASE_URL}/api/campaigns/${id}`).catch(() => {});
+  }
+  if (testCampaignId || fallbackCampaignId) console.log("  Test campaigns cleaned up");
 
   // ===========================================================================
   // CONSOLE ERRORS

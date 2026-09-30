@@ -53,6 +53,7 @@ interface StepRow {
   step_number: number;
   delay_days: number;
   template_name: string;
+  template_parameters?: CampaignStep["template_parameters"];
 }
 
 export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetailProps) {
@@ -75,6 +76,7 @@ export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetai
       step_number: s.step_number,
       delay_days: s.delay_days,
       template_name: s.template_name,
+      template_parameters: s.template_parameters ?? null,
     }))
   );
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -172,6 +174,7 @@ export function CampaignDetail({ campaign, initialSteps, groups }: CampaignDetai
             step_number: s.step_number,
             delay_days: s.delay_days,
             template_name: s.template_name,
+            template_parameters: s.template_parameters ?? null,
           })),
         }),
       });
