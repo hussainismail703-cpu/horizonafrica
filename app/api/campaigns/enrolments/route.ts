@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/phone-utils";
 
+// PostgREST puts .in() values in the URL query string, which fails with
+// oversized URLs well below the ~1,719-phone launch segment. Chunk all
+// .in() lookups to keep each request comfortably under URL limits.
+const IN_CHUNK = 200;
+
+function chunks<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 // GET /api/campaigns/enrolments?campaign_id=<id>
 // Returns enrolments for a campaign with lead info joined.
 export async function GET(req: NextRequest) {
@@ -116,38 +127,63 @@ export async function POST(req: NextRequest) {
   // Deduplicate
   const uniquePhones = Array.from(new Set(phoneNumbers));
 
-  // Exclude opted-out phone numbers (global opt-out list)
-  const { data: optedOut } = await supabase
-    .from("opt_out_list")
-    .select("phone_number")
-    .in("phone_number", uniquePhones);
+  // Exclude opted-out phone numbers (global opt-out list). Queries are
+  // chunked so large enrolment batches stay under PostgREST URL limits.
+  const optedOutSet = new Set<string>();
+  for (const batch of chunks(uniquePhones, IN_CHUNK)) {
+    const { data: optedOut, error: optOutErr } = await supabase
+      .from("opt_out_list")
+      .select("phone_number")
+      .in("phone_number", batch);
+    if (optOutErr) {
+      return NextResponse.json(
+        { error: `Failed to check opt-out list: ${optOutErr.message}` },
+        { status: 500 }
+      );
+    }
+    for (const o of optedOut ?? []) optedOutSet.add(o.phone_number);
+  }
 
-  const optedOutSet = new Set((optedOut ?? []).map((o) => o.phone_number));
   const enrolablePhones = uniquePhones.filter((p) => !optedOutSet.has(p));
   const excludedOptOut = uniquePhones.length - enrolablePhones.length;
 
   // Look up existing leads by phone_number to populate lead_id
-  const { data: leads } = await supabase
-    .from("leads")
-    .select("id, phone_number")
-    .in("phone_number", enrolablePhones);
-
   const leadMap = new Map<string, number>();
-  for (const lead of leads ?? []) {
-    leadMap.set(normalizePhone(lead.phone_number), lead.id);
+  for (const batch of chunks(enrolablePhones, IN_CHUNK)) {
+    const { data: leads, error: leadsErr } = await supabase
+      .from("leads")
+      .select("id, phone_number")
+      .in("phone_number", batch);
+    if (leadsErr) {
+      return NextResponse.json(
+        { error: `Failed to resolve leads: ${leadsErr.message}` },
+        { status: 500 }
+      );
+    }
+    for (const lead of leads ?? []) {
+      leadMap.set(normalizePhone(lead.phone_number), lead.id);
+    }
   }
 
   // Check for existing active enrolments to avoid unique constraint violations
-  const { data: existingEnrolments } = await supabase
-    .from("campaign_enrolments")
-    .select("phone_number, status")
-    .eq("campaign_id", campaignId)
-    .in("phone_number", enrolablePhones)
-    .neq("status", "removed");
-
-  const existingActivePhones = new Set(
-    (existingEnrolments ?? []).map((e) => e.phone_number)
-  );
+  const existingActivePhones = new Set<string>();
+  for (const batch of chunks(enrolablePhones, IN_CHUNK)) {
+    const { data: existingEnrolments, error: existErr } = await supabase
+      .from("campaign_enrolments")
+      .select("phone_number")
+      .eq("campaign_id", campaignId)
+      .in("phone_number", batch)
+      .neq("status", "removed");
+    if (existErr) {
+      return NextResponse.json(
+        { error: `Failed to check existing enrolments: ${existErr.message}` },
+        { status: 500 }
+      );
+    }
+    for (const e of existingEnrolments ?? []) {
+      existingActivePhones.add(e.phone_number);
+    }
+  }
 
   // Build enrolment rows for phones that don't already have an active enrolment
   const rowsToInsert = enrolablePhones
@@ -164,15 +200,17 @@ export async function POST(req: NextRequest) {
   let enrolled = 0;
   const errors: string[] = [];
 
-  if (rowsToInsert.length > 0) {
+  // Insert in batches: unique-violation on a concurrent enrol of the same
+  // phone only fails that batch, not the whole request.
+  for (const batch of chunks(rowsToInsert, 500)) {
     const { error: insertErr } = await supabase
       .from("campaign_enrolments")
-      .insert(rowsToInsert);
+      .insert(batch);
 
     if (insertErr) {
       errors.push(insertErr.message);
     } else {
-      enrolled = rowsToInsert.length;
+      enrolled += batch.length;
     }
   }
 

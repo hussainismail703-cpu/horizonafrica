@@ -46,6 +46,12 @@ export interface Conversation {
   created_at: string;
 }
 
+// conversation_threads view row: the latest message per phone plus the
+// total message count, so thread lists don't need every message row.
+export interface ConversationThread extends Conversation {
+  message_count: number;
+}
+
 export interface BroadcastGroup {
   id: number;
   group_name: string;

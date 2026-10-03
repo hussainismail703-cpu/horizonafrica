@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Normalize phone numbers and validate
-  const rows = contacts
+  const normalized = contacts
     .map((c) => {
       const phone = normalizePhone(c.phone_number || "");
       if (!phone || phone.length < 10) return null;
@@ -47,22 +47,33 @@ export async function POST(request: NextRequest) {
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
-  if (rows.length === 0) {
+  if (normalized.length === 0) {
     return NextResponse.json({ error: "No valid contacts found. Phone numbers must be at least 10 digits." }, { status: 400 });
   }
 
+  // Dedupe within the payload (last entry wins for a repeated phone) so the
+  // same customer can't receive a broadcast twice from one import.
+  const deduped = new Map<string, (typeof normalized)[number]>();
+  for (const row of normalized) deduped.set(row.phone_number, row);
+  const rows = Array.from(deduped.values());
+  const dupesInPayload = normalized.length - rows.length;
+
+  // The uq_broadcast_contacts_group_phone unique index makes this safe:
+  // rows that already exist in the group are skipped instead of duplicated.
   const { data, error } = await supabase
     .from("broadcast_contacts")
-    .insert(rows)
+    .upsert(rows, { onConflict: "group_id,phone_number", ignoreDuplicates: true })
     .select("id, contact_name, phone_number, group_id, opt_in, created_at");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const imported = data?.length ?? 0;
   return NextResponse.json({
-    imported: data?.length ?? 0,
-    skipped: contacts.length - rows.length,
+    imported,
+    skipped: contacts.length - imported,
+    skipped_duplicates: dupesInPayload + (rows.length - imported),
     contacts: data,
   }, { status: 201 });
 }
