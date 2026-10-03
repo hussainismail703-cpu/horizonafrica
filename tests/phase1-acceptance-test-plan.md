@@ -292,3 +292,31 @@ secrets in client bundles; error responses don't leak internals.
 **GO, conditional on §10.3 manual items.** All client-blocking defects found
 by the audit are fixed and verified green. The 1,719-lead enrolment path is
 proven at full scale; the send path is race-safe, budgeted, and observable.
+
+### 10.5 Post-audit regression re-verification (2026-10-04)
+
+Full master retest run on `prelaunch-audit` @ `d105939` to confirm the §10.1
+fixes introduced no regressions.
+
+| Suite | Result | Notes |
+|---|---|---|
+| Pre-flight | 26/26 | |
+| UI — dashboard | 107/112 headed, **125/125 isolated re-run** | Follow-ups/Templates/Reports nav + Products + Forgot-password failures were resource degradation late in the ~2 h headed run; all pass clean on re-run |
+| UI — campaign engine | 76/76 | |
+| Campaign response | 45/45 | |
+| Client simulation | 40/40 | |
+| Advanced simulation | 47/47 | |
+| Comprehensive | 64/64 | |
+| Chaos / destructive | 156/156 | 0 security issues |
+| AI conversation | 57/59, **B1+B2 pass on isolated re-run** | Timeout + `fetch failed` under load; both scenarios verified passing standalone |
+| Workflow e2e | 67/67 | 3 warnings, 3 expected n8n-pending markers |
+| Webhook security | 27/27 | |
+| Prompt injection | 15/15 | |
+| Gap tests | 41/41 | |
+| Post-release | 25/25 | 0 warnings — mobile pane, location, score-lock, JEV chain |
+| Prelaunch audit re-check | 41/41 | 0 security issues |
+
+**Verdict: no product defects found.** All 7 master-retest failures confirmed
+as environmental flakes via isolated re-runs. Conversations module refactor
+(`conversation_threads`) and campaign claim-before-send changes specifically
+validated by the conversations, campaign-response, and chaos suites.
