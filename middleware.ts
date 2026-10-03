@@ -46,6 +46,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/whatsapp-webhook" ||
     pathname === "/api/campaigns/process" ||
     pathname === "/api/campaigns/classify" ||
+    pathname === "/api/follow-ups/cron" ||
     pathname === "/api/health";
 
   if (!user && !isAuthPage && !isPublicApi) {

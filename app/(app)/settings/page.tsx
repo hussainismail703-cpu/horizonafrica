@@ -20,7 +20,7 @@ const integrations: IntegrationStatus[] = [
   {
     name: "Brevo Email",
     description: "Sends hot lead email alerts to staff",
-    status: "pending",
+    status: "connected",
     icon: Mail,
   },
   {
@@ -32,7 +32,7 @@ const integrations: IntegrationStatus[] = [
   {
     name: "Chatwoot",
     description: "Live chat handover when AI escalates to human agent",
-    status: "not-configured",
+    status: "connected",
     icon: MessageSquare,
   },
   {

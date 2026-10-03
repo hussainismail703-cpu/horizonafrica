@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { normalizePhone } from "@/lib/phone-utils";
 
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
@@ -40,7 +40,7 @@ export async function sendFollowUps(leadId?: number): Promise<FollowUpResult> {
     };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   let query = supabase
     .from("leads")

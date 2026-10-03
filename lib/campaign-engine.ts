@@ -61,6 +61,17 @@ interface MetaSendResponse {
   error?: { message: string; code: number };
 }
 
+// Bounded parallelism for sends. Meta allows ~80 msg/s; we stay deliberately
+// low so a large campaign drains within a few cron cycles without hammering
+// the API or blowing the function time budget.
+const PROCESS_CONCURRENCY = 8;
+// Route maxDuration is 60s — stop claiming new sends early enough to finish
+// in-flight work and write results before Vercel kills the function.
+const PROCESS_BUDGET_MS = 45_000;
+// A 'pending' interaction is claimed before the Meta call; a crash between
+// claim and send leaves it pending forever, so stale claims are re-tried.
+const PENDING_CLAIM_STALE_MS = 15 * 60 * 1000;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -115,10 +126,15 @@ export async function processCampaigns(): Promise<CampaignProcessingResult> {
     return result;
   }
 
+  // Single wall-clock budget across all campaigns in this invocation so the
+  // whole run exits cleanly before the function timeout instead of being
+  // killed mid-write. Deferred enrolments are picked up by the next cycle.
+  const deadline = Date.now() + PROCESS_BUDGET_MS;
+
   for (const campaign of (campaigns ?? []) as CampaignRow[]) {
     result.campaigns_processed++;
     try {
-      const sub = await processCampaign(campaign.id);
+      const sub = await processCampaign(campaign.id, deadline);
       result.messages_sent += sub.messages_sent;
       result.messages_failed += sub.messages_failed;
       result.enrolments_advanced += sub.enrolments_advanced;
@@ -144,7 +160,8 @@ export async function processCampaigns(): Promise<CampaignProcessingResult> {
  * Process a single active campaign: find due enrolments and send their next step.
  */
 export async function processCampaign(
-  campaignId: string
+  campaignId: string,
+  deadline?: number
 ): Promise<CampaignProcessingResult> {
   const supabase = createServiceClient();
   const result: CampaignProcessingResult = {
@@ -203,86 +220,143 @@ export async function processCampaign(
   }
 
   const now = new Date();
+  const queue = (enrolments ?? []) as EnrolmentRow[];
+  let cursor = 0;
 
-  for (const enrol of (enrolments ?? []) as EnrolmentRow[]) {
-    // Skip opted-out phone numbers
-    if (optedOutSet.has(normalizePhone(enrol.phone_number))) {
-      continue;
-    }
+  // Worker pool: enrolments are claimed independently, so bounded parallelism
+  // is safe. The unique partial index on campaign_interactions
+  // (enrol_id, step_number) for outbound rows makes the claim atomic —
+  // concurrent invocations can never double-send the same step.
+  const worker = async () => {
+    while (cursor < queue.length) {
+      if (deadline && Date.now() >= deadline) break;
+      const enrol = queue[cursor++];
 
-    // current_step is 0-indexed: 0 means "about to send step 1"
-    const stepIndex = enrol.current_step;
-    if (stepIndex >= stepList.length) {
-      // Already past the last step. If still active (never responded),
-      // mark as no_response_final + nurture_flag. This fires on the cycle
-      // AFTER the last step was sent, giving the customer a grace period
-      // (one cron cycle) to respond to the final message.
-      if (enrol.status === "active") {
-        await supabase
-          .from("campaign_enrolments")
-          .update({
-            status: "no_response_final",
-            nurture_flag: true,
-            final_outcome: "NO RESPONSE – FINAL ATTEMPT",
-          })
-          .eq("id", enrol.id);
+      // Skip opted-out phone numbers
+      if (optedOutSet.has(normalizePhone(enrol.phone_number))) {
+        continue;
       }
-      result.enrolments_advanced++;
-      continue;
-    }
 
-    const step = stepList[stepIndex];
+      // current_step is 0-indexed: 0 means "about to send step 1"
+      const stepIndex = enrol.current_step;
+      if (stepIndex >= stepList.length) {
+        // Already past the last step. If still active (never responded),
+        // mark as no_response_final + nurture_flag. This fires on the cycle
+        // AFTER the last step was sent, giving the customer a grace period
+        // (one cron cycle) to respond to the final message.
+        if (enrol.status === "active") {
+          await supabase
+            .from("campaign_enrolments")
+            .update({
+              status: "no_response_final",
+              nurture_flag: true,
+              final_outcome: "NO RESPONSE – FINAL ATTEMPT",
+            })
+            .eq("id", enrol.id);
+        }
+        result.enrolments_advanced++;
+        continue;
+      }
 
-    // Check delay: the step should fire `delay_days` after either the
-    // enrolment date (for step 0) or after the previous step was sent.
-    // We approximate by using enrolled_at + cumulative delay.
-    const enrolledAt = new Date(enrol.enrolled_at);
-    let cumulativeDelayDays = 0;
-    for (let i = 0; i <= stepIndex; i++) {
-      cumulativeDelayDays += stepList[i].delay_days;
-    }
-    const fireAt = new Date(enrolledAt.getTime() + cumulativeDelayDays * 24 * 60 * 60 * 1000);
+      const step = stepList[stepIndex];
 
-    if (now < fireAt) {
-      continue; // not due yet
-    }
+      // Check delay: the step should fire `delay_days` after either the
+      // enrolment date (for step 0) or after the previous step was sent.
+      // We approximate by using enrolled_at + cumulative delay.
+      const enrolledAt = new Date(enrol.enrolled_at);
+      let cumulativeDelayDays = 0;
+      for (let i = 0; i <= stepIndex; i++) {
+        cumulativeDelayDays += stepList[i].delay_days;
+      }
+      const fireAt = new Date(enrolledAt.getTime() + cumulativeDelayDays * 24 * 60 * 60 * 1000);
 
-    // Duplicate-prevention: skip if we already have an outbound interaction
-    // for this enrolment + step_number
-    const { data: existing } = await supabase
-      .from("campaign_interactions")
-      .select("id")
-      .eq("enrol_id", enrol.id)
-      .eq("step_number", step.step_number)
-      .eq("message_type", "outbound")
-      .limit(1);
+      if (now < fireAt) {
+        continue; // not due yet
+      }
 
-    if (existing && existing.length > 0) {
-      continue; // already sent this step
-    }
+      // Duplicate-prevention + atomic claim. An existing outbound row means
+      // the step was already sent (or is being sent right now by another
+      // invocation). A 'pending' row older than PENDING_CLAIM_STALE_MS
+      // belongs to a crashed invocation and is reclaimed.
+      const { data: existing } = await supabase
+        .from("campaign_interactions")
+        .select("id, delivery_status, created_at")
+        .eq("enrol_id", enrol.id)
+        .eq("step_number", step.step_number)
+        .eq("message_type", "outbound")
+        .limit(1);
 
-    // Send the message
-    const sendRes = await sendCampaignMessage(
-      enrol.phone_number,
-      step.template_name,
-      campaignId,
-      enrol.id,
-      step.step_number,
-      step.template_parameters ?? null,
-      enrol.lead_id ?? null
-    );
+      const existingRow = existing?.[0];
+      if (existingRow) {
+        const isStalePending =
+          existingRow.delivery_status === "pending" &&
+          now.getTime() - new Date(existingRow.created_at).getTime() >
+            PENDING_CLAIM_STALE_MS;
+        if (!isStalePending) {
+          continue; // already sent or claimed by a live invocation
+        }
+        await supabase
+          .from("campaign_interactions")
+          .delete()
+          .eq("id", existingRow.id);
+      }
 
-    if (sendRes.success) {
-      result.messages_sent++;
-      // Advance enrolment to next step (or mark completed)
-      await advanceEnrolment(enrol.id, stepList.length);
-      result.enrolments_advanced++;
-    } else {
-      result.messages_failed++;
-      result.errors.push(
-        `${enrol.phone_number} step ${step.step_number}: ${sendRes.error ?? "unknown error"}`
+      // Claim the send before calling Meta. If another invocation claimed it
+      // first, the unique index rejects the insert and we skip — the customer
+      // can never receive the same step twice.
+      const { data: claim, error: claimErr } = await supabase
+        .from("campaign_interactions")
+        .insert({
+          campaign_id: campaignId,
+          enrol_id: enrol.id,
+          phone_number: normalizePhone(enrol.phone_number),
+          step_number: step.step_number,
+          message_type: "outbound",
+          template_name: step.template_name,
+          delivery_status: "pending",
+        })
+        .select("id")
+        .single();
+
+      if (claimErr || !claim) {
+        continue; // claimed concurrently
+      }
+
+      // Send the message and write the outcome back onto the claimed row.
+      const sendRes = await sendCampaignMessage(
+        enrol.phone_number,
+        step.template_name,
+        campaignId,
+        enrol.id,
+        step.step_number,
+        step.template_parameters ?? null,
+        enrol.lead_id ?? null,
+        claim.id
       );
+
+      if (sendRes.success) {
+        result.messages_sent++;
+        // Advance enrolment to next step (or mark completed)
+        await advanceEnrolment(enrol.id, stepList.length);
+        result.enrolments_advanced++;
+      } else {
+        result.messages_failed++;
+        result.errors.push(
+          `${enrol.phone_number} step ${step.step_number}: ${sendRes.error ?? "unknown error"}`
+        );
+      }
     }
+  };
+
+  await Promise.all(
+    Array.from({ length: PROCESS_CONCURRENCY }, () => worker())
+  );
+
+  const deferred = queue.length - cursor;
+  if (deferred > 0) {
+    result.errors.push(
+      `Time budget exhausted: ${deferred} enrolment(s) deferred to next cycle`
+    );
   }
 
   // Cleanup pass: mark "responded" enrolments past the last step as completed.
@@ -325,9 +399,42 @@ export async function sendCampaignMessage(
   enrolId: string,
   stepNumber: number,
   templateParameters?: TemplateParamConfig[] | null,
-  leadId?: number | null
+  leadId?: number | null,
+  claimInteractionId?: string | null
 ): Promise<SendResult> {
   const supabase = createServiceClient();
+
+  // When processCampaign claimed an interaction row up front, the send
+  // outcome is written back onto that row. Without a claim (legacy/direct
+  // calls) a new outbound row is inserted instead.
+  const recordOutcome = async (
+    deliveryStatus: "sent" | "failed",
+    metaMessageId: string | null,
+    metaError: string | null
+  ) => {
+    if (claimInteractionId) {
+      await supabase
+        .from("campaign_interactions")
+        .update({
+          delivery_status: deliveryStatus,
+          meta_message_id: metaMessageId,
+          meta_error: metaError,
+        })
+        .eq("id", claimInteractionId);
+    } else {
+      await recordInteraction({
+        campaignId,
+        enrolId,
+        phoneNumber: normalizePhone(phoneNumber),
+        stepNumber,
+        messageType: "outbound",
+        templateName,
+        deliveryStatus,
+        metaMessageId,
+        metaError,
+      });
+    }
+  };
 
   if (!META_PHONE_NUMBER_ID || !META_ACCESS_TOKEN) {
     return {
@@ -401,18 +508,7 @@ export async function sendCampaignMessage(
 
     if (!res.ok || data.error || !data.messages?.[0]?.id) {
       const errMsg = data.error?.message ?? `Meta API returned ${res.status}`;
-      // Record failed interaction
-      await recordInteraction({
-        campaignId,
-        enrolId,
-        phoneNumber: phone,
-        stepNumber,
-        messageType: "outbound",
-        templateName,
-        deliveryStatus: "failed",
-        metaMessageId: null,
-        metaError: errMsg,
-      });
+      await recordOutcome("failed", null, errMsg);
       await logCampaignError({
         campaignId,
         enrolId,
@@ -425,16 +521,7 @@ export async function sendCampaignMessage(
     }
 
     const metaMessageId = data.messages[0].id;
-    await recordInteraction({
-      campaignId,
-      enrolId,
-      phoneNumber: phone,
-      stepNumber,
-      messageType: "outbound",
-      templateName,
-      deliveryStatus: "sent",
-      metaMessageId,
-    });
+    await recordOutcome("sent", metaMessageId, null);
 
     // Update lead's last_campaign_contact_date
     const { data: enrolment } = await supabase
@@ -453,17 +540,7 @@ export async function sendCampaignMessage(
     return { success: true, metaMessageId };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Network error";
-    await recordInteraction({
-      campaignId,
-      enrolId,
-      phoneNumber: phone,
-      stepNumber,
-      messageType: "outbound",
-      templateName,
-      deliveryStatus: "failed",
-      metaMessageId: null,
-      metaError: errMsg,
-    });
+    await recordOutcome("failed", null, errMsg);
     await logCampaignError({
       campaignId,
       enrolId,

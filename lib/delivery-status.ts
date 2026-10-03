@@ -35,6 +35,62 @@ export function extractStatusUpdates(body: unknown): MetaStatus[] {
   return statuses;
 }
 
+// Delivery statuses only ever move forward. Meta occasionally sends updates
+// out of order (e.g. "delivered" after "read"), so each status has a set of
+// predecessor states it may legally replace.
+const STATUS_PREDECESSORS: Record<string, string[]> = {
+  sent: ["pending"],
+  delivered: ["pending", "sent"],
+  read: ["pending", "sent", "delivered"],
+  failed: ["pending", "sent", "delivered"],
+};
+
+/**
+ * Persist non-failure delivery callbacks (sent/delivered/read, plus Meta-side
+ * failures) onto the records that originated the message:
+ *   - campaign_interactions (matched on meta_message_id) so campaign
+ *     delivery/read-rate metrics reflect reality
+ *   - broadcast_messages (matched on wamid) so broadcast_history
+ *     total_delivered/total_read counters tick up via the sync trigger.
+ * Failed statuses also keep landing in message_delivery_failures via
+ * recordDeliveryFailures() for the alert trail.
+ */
+export async function recordDeliveryStatuses(
+  statuses: MetaStatus[]
+): Promise<void> {
+  const supabase = createServiceClient();
+
+  for (const s of statuses) {
+    const wamid = s.id;
+    const status = s.status;
+    if (!wamid || !status) continue;
+    const predecessors = STATUS_PREDECESSORS[status];
+    if (!predecessors) continue;
+
+    const err = s.errors?.[0];
+    const errText =
+      err?.error_data?.details ?? err?.message ?? err?.title ?? null;
+
+    await supabase
+      .from("campaign_interactions")
+      .update({
+        delivery_status: status,
+        ...(status === "failed" ? { meta_error: errText } : {}),
+      })
+      .eq("meta_message_id", wamid)
+      .in("delivery_status", predecessors);
+
+    await supabase
+      .from("broadcast_messages")
+      .update({
+        status,
+        ...(status === "failed" ? { error: errText } : {}),
+      })
+      .eq("wamid", wamid)
+      .in("status", predecessors);
+  }
+}
+
 /**
  * Persist failed delivery statuses to message_delivery_failures so sends that
  * Meta accepted but could not deliver are visible instead of silently marked

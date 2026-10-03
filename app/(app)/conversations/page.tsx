@@ -6,9 +6,11 @@ export const dynamic = "force-dynamic";
 
 export default async function ConversationsPage() {
   const supabase = await createClient();
-  const [{ data: conversations }, { data: leads }] = await Promise.all([
+  const [{ data: threads }, { data: leads }] = await Promise.all([
+    // One row per phone thread — scales with distinct customers, not total
+    // messages. Individual threads are lazy-loaded on selection.
     supabase
-      .from("conversations")
+      .from("conversation_threads")
       .select("*")
       .order("created_at", { ascending: false }),
     supabase.from("leads").select("phone_number, lead_score"),
@@ -26,7 +28,7 @@ export default async function ConversationsPage() {
           WhatsApp conversation history between leads and the AI assistant
         </p>
       </div>
-      <ConversationView conversations={conversations ?? []} leadScores={leadScores} />
+      <ConversationView threads={threads ?? []} leadScores={leadScores} />
     </div>
   );
 }

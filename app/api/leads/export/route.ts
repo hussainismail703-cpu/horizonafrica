@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Neutralize spreadsheet formula injection: values starting with =, +, -,
+  // @, tab or CR are executed as formulas when the CSV is opened in Excel.
+  // Prefixing with a single quote makes Excel treat them as literal text.
+  const sanitizeCell = (value: unknown): string => {
+    const s = String(value);
+    return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  };
+
   const headers = ["Name", "Phone", "Email", "Product Interest", "Score", "Status", "Created"];
   const rows = (data ?? []).map((l) => [
     l.full_name ?? "",
@@ -52,7 +60,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   const csv = [headers, ...rows]
-    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .map((r) => r.map((c) => `"${sanitizeCell(c).replace(/"/g, '""')}"`).join(","))
     .join("\n");
 
   return new NextResponse(csv, {

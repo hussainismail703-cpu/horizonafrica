@@ -3,9 +3,20 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/phone-utils";
 import { formatDateTime } from "@/lib/format";
 
+export const maxDuration = 60;
+
 const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
+
+// Stop claiming new sends before the function timeout so in-flight work can
+// finish and broadcast_history always gets written (no rows stuck "sending").
+const SEND_BUDGET_MS = 45_000;
+// Bounded parallelism: Meta allows ~80 msg/s, we stay deliberately lower.
+const SEND_CONCURRENCY = 8;
+// Write progress to broadcast_history periodically so a hard kill still
+// leaves approximately-correct totals instead of a stuck "sending" row.
+const PROGRESS_FLUSH_EVERY = 25;
 
 interface MetaSendResponse {
   messaging_product: string;
@@ -114,12 +125,35 @@ export async function POST(request: NextRequest) {
   }
 
   const broadcastId = historyRecord.id;
+  const deadline = Date.now() + SEND_BUDGET_MS;
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
+  const messageRows: {
+    broadcast_id: number;
+    phone_number: string;
+    wamid: string | null;
+    status: string;
+    error: string | null;
+  }[] = [];
 
-  // Send messages sequentially to avoid rate limits
-  for (const recipient of recipients) {
+  const flushProgress = async (finalStatus?: string) => {
+    await supabase
+      .from("broadcast_history")
+      .update({
+        total_sent: sent,
+        total_failed: failed,
+        ...(finalStatus
+          ? { status: finalStatus, completed_at: new Date().toISOString() }
+          : {}),
+      })
+      .eq("id", broadcastId);
+  };
+
+  const sendOne = async (recipient: {
+    phone_number: string;
+    contact_name: string | null;
+  }) => {
     const phone = normalizePhone(recipient.phone_number);
 
     const template: Record<string, unknown> = {
@@ -127,9 +161,7 @@ export async function POST(request: NextRequest) {
       language: { code: langCode },
     };
 
-    // Build components with parameters if template has them
     if (params.length > 0) {
-      // Group params by component type (header, body)
       const byComponent: Record<string, typeof params> = {};
       for (const p of params) {
         const compKey = p.component ?? "body";
@@ -173,29 +205,76 @@ export async function POST(request: NextRequest) {
       );
 
       const data: MetaSendResponse = await res.json();
+      const wamid = data.messages?.[0]?.id ?? null;
 
       if (!res.ok || data.error) {
         failed++;
-        errors.push(`${phone}: ${data.error?.message ?? "Unknown error"}`);
+        const errMsg = data.error?.message ?? "Unknown error";
+        errors.push(`${phone}: ${errMsg}`);
+        messageRows.push({
+          broadcast_id: broadcastId,
+          phone_number: phone,
+          wamid,
+          status: "failed",
+          error: errMsg,
+        });
       } else {
         sent++;
+        messageRows.push({
+          broadcast_id: broadcastId,
+          phone_number: phone,
+          wamid,
+          status: "sent",
+          error: null,
+        });
       }
     } catch {
       failed++;
       errors.push(`${phone}: Network error`);
+      messageRows.push({
+        broadcast_id: broadcastId,
+        phone_number: phone,
+        wamid: null,
+        status: "failed",
+        error: "Network error",
+      });
     }
+  };
+
+  // Worker pool over recipients with a wall-clock budget. Deferred
+  // recipients are reported so the operator can resend to the remainder.
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < recipients.length) {
+      if (Date.now() >= deadline) break;
+      const recipient = recipients[cursor++];
+      await sendOne(recipient);
+      if ((sent + failed) % PROGRESS_FLUSH_EVERY === 0) {
+        await flushProgress();
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: SEND_CONCURRENCY }, () => worker())
+  );
+
+  const deferred = recipients.length - cursor;
+  const finalStatus =
+    deferred > 0
+      ? "partial"
+      : failed === recipients.length
+        ? "failed"
+        : "completed";
+
+  // Persist per-message wamids so Meta delivery-status callbacks can update
+  // delivered/read counters on this broadcast.
+  for (let i = 0; i < messageRows.length; i += 500) {
+    await supabase
+      .from("broadcast_messages")
+      .insert(messageRows.slice(i, i + 500));
   }
 
-  // Update broadcast history
-  await supabase
-    .from("broadcast_history")
-    .update({
-      total_sent: sent,
-      total_failed: failed,
-      status: failed === recipients.length ? "failed" : "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", broadcastId);
+  await flushProgress(finalStatus);
 
   return NextResponse.json({
     broadcast_id: broadcastId,
@@ -203,6 +282,9 @@ export async function POST(request: NextRequest) {
     skipped_opted_out: skippedOptedOut,
     sent,
     failed,
+    ...(deferred > 0
+      ? { deferred, note: `${deferred} recipient(s) deferred — resend to reach them` }
+      : {}),
     errors: errors.length > 0 ? errors : undefined,
   });
 }

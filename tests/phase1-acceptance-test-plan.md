@@ -239,3 +239,56 @@ clean, or the `template_parameters` product bug which was fixed and re-verified
 
 The 1,719-lead pilot enrolment remains a separate launch decision and is out of
 scope for this acceptance pass.
+
+---
+
+## 10. Pre-Launch "Break the App" Audit (2026-10-03)
+
+A second adversarial pass beyond the ~990-test suite, covering live-defect
+verification, failure injection, launch-scale behaviour, session/UX edge cases,
+and security extras. Full checklist: `tests/prelaunch-audit.md`.
+Suite: `node --env-file=.env.local tests/prelaunch-audit.mjs`.
+
+### 10.1 Defects confirmed and fixed
+
+| Defect | Fix |
+|--------|-----|
+| Follow-ups cron was dead code (middleware 307 → n8n reported success-no-op; cookie client under RLS) | Middleware exemption + `createServiceClient` + n8n URL corrected — verified `processed=1` live |
+| Bulk enrolment `.in()` URL overflow | Chunked at 200 + insert batches of 500 — 1,719 phones enrolled in 8.5s |
+| Sequential campaign process vs 60s limit | Worker pool (8) + 45s budget, clean deferral |
+| Duplicate-send race | Unique index + atomic claim-before-send; concurrent invocations verified single-send |
+| Broadcast stuck `sending`, no `maxDuration` | Budget + concurrency + periodic progress + `partial` status |
+| Delivered/read receipts discarded | `campaign_interactions` monotonic updates + `broadcast_messages` + history counters via trigger |
+| CSV formula injection | `= + - @ \t \r` cells prefixed with `'` |
+| Settings hardcoded wrong statuses | Brevo + Chatwoot now "connected" (live via n8n) |
+| Unbounded conversations query | `conversation_threads` view + lazy `/api/conversations` per-thread load |
+| `xlsx@0.18.5` CVEs | SheetJS 0.20.3 CDN tarball; Next 15.4.11→15.5.27 for critical advisory |
+| Bulk import dupes | Payload dedupe + unique index + `ignoreDuplicates` upsert |
+| Inbound wamid TOCTOU | `uq_campaign_interactions_meta_message_id` index — concurrent delivery now single-records |
+| `broadcast_messages` RLS insert | Policy added (was silently dropping per-message rows) |
+
+### 10.2 Results
+
+**41 passed, 0 failed, 0 security, 11 manual.**
+
+Notable evidence: 1,719-phone enrolment 8.5s; concurrent `process` calls → 1 send;
+sent→delivered→read monotonic with no downgrade; broadcast counters via trigger;
+15-webhook flood all 200s; `x-middleware-subrequest` does not bypass auth; no
+secrets in client bundles; error responses don't leak internals.
+
+### 10.3 Outstanding manual / accepted items
+
+- Backup/restore drill, health→alert chain, Vercel env audit, signature
+  enforcement rollout, token-revocation alerting, alert-email dedupe,
+  deploy/migration rollback drill, POPIA workflows — see §D checklist in
+  `tests/prelaunch-audit.md`.
+- Accepted risks: no rate limiting on authenticated write endpoints
+  (single-tenant internal tool); non-timing-safe Bearer compare; leads page
+  and `/api/reports` remain unbounded-capped (documented for post-launch
+  pagination); remaining `npm audit` findings need Next 16 or dev-only deps.
+
+### 10.4 Go/No-Go
+
+**GO, conditional on §10.3 manual items.** All client-blocking defects found
+by the audit are fixed and verified green. The 1,719-lead enrolment path is
+proven at full scale; the send path is race-safe, budgeted, and observable.
