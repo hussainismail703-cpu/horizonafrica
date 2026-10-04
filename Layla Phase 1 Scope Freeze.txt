@@ -1,0 +1,383 @@
+Phase 1 Scope Freeze Document
+Layla Campaign Orchestration & Customer Lifecycle Engine
+Client: Shavs Telecommunications 24 PTY Ltd T/a Horizon Africa (Keshlan Naidoo)
+Provider: OWD Solutions (Mohamed Osman)
+Quote ref: Q-2026-0825-HC-CAMPAIGN
+Status: Proposed - pending signature by both parties
+
+================================================================================
+1. PURPOSE
+================================================================================
+This document defines, in writing and before development commences, the complete
+and final scope of Phase 1 of the Layla Campaign Orchestration & Customer Lifecycle
+Engine. It converts the Phase 1 feature list into concrete, testable deliverables
+and acceptance criteria.
+
+On signature by both parties, Phase 1 scope is frozen. Development proceeds against
+this document only. Any feature, modification, or addition outside this scope is
+treated as a change request and is quoted separately (see Section 11).
+
+Phase 2 and Phase 3 remain outlined but not contracted, and are scoped in detail
+after the preceding phase is delivered.
+
+
+================================================================================
+2. TERMS & PAYMENTS
+================================================================================
+- Upfront payment: 50% due on acceptance of this document to commence development.
+- Delivery payment: 50% due on completion of the Phase 1 acceptance process
+  (Section 10), including the controlled pilot.
+
+Separate Ongoing Infrastructure:
+- Supabase Pro (approximately USD $25/month) - required to enable automated daily
+  backups beyond the free-tier limit (Section 7.2). This is a recurring platform
+  service cost, billed by the platform, not a development fee. (At the client's
+  option, this may be paid directly to the platform or reimbursed to OWD Solutions
+  at cost.)
+
+
+================================================================================
+3. CURRENT PRODUCTION BASELINE (ALREADY BUILT - NOT PHASE 1 SCOPE)
+================================================================================
+The following are live and deployed today and are not re-delivered or re-billed under
+Phase 1. They form the foundation Phase 1 builds upon:
+
+- WhatsApp Business API integration (send/receive)
+- AI assistant (Layla) with OpenRouter GPT-5.6-sol
+- Dashboard (Next.js, Supabase Auth)
+- Lead management (CRUD, scoring, status, CSV export)
+- Bulk lead/customer upload using the OWD standard template
+- Conversation history viewer
+- Broadcast system (template send to groups)
+- Template management (create, submit to Meta, track)
+- Follow-up reminder system (scheduled, automated)
+- Product catalog manager (real-time AI sync)
+- Reports & analytics (KPIs, charts, date ranges)
+- System health monitoring (6 service checks)
+- Lead scoring (HOT/WARM/COLD) with keyword detection
+- Objection detection (5 types)
+- Escalation detection + human handover (Chatwoot)
+- Hot lead & escalation email alerts (Brevo)
+- Missed message recovery system
+- Error alert notifications
+- 15 approved WhatsApp templates
+
+
+================================================================================
+4. PHASE 1 DELIVERABLES
+================================================================================
+The following features are delivered, tested, and accepted under Phase 1:
+
+4.1 Campaign Creator
+- Create, name, and configure campaigns from the dashboard.
+- Campaign name and objective are configurable.
+- Campaign start date and end date are configurable.
+- Campaign is targeted by selecting contacts/groups using the existing
+  contact/broadcast system.
+
+4.2 Multi-Step Follow-Up Sequences
+- A configurable sequence of steps per campaign (e.g. Day 0 -> Day 2 -> Day 5 -> Day 10 -> Day 21).
+- Each step sends a different approved WhatsApp template.
+- Sequences can be configured and changed after creation without development work
+  (configuration, not new code).
+
+4.3 Automatic Sequence Progression
+- If a customer does not respond, the system automatically sends the next sequence
+  step at the configured interval.
+
+4.4 Response Detection
+- When a customer responds to a campaign message, the system detects the response,
+  stops that customer's sequence, and routes them into the existing sales flow.
+- The response, response time, and outcome are recorded (see 4.7).
+
+4.5 "Not Interested" Reason Capture
+- When a customer indicates they are not interested, Layla attempts to identify
+  the reason through conversation (price, already has service, not needed, not now,
+  needs more info, competitor, not eligible, other) and stores it on the customer profile.
+
+4.6 Intent Classification
+- Layla classifies every response: interested, not interested, already has service,
+  needs information, no response, other.
+- Where classification is uncertain, the system defaults to "uncertain -> human review"
+  rather than misclassifying.
+- Expected initial accuracy ~85-90%, improving with tuning.
+
+4.7 Interaction Tracking
+- Every campaign message is tracked: who was contacted, when, delivery status,
+  whether they responded, response time, outcome.
+- A full audit trail of who was contacted, when, and what happened is stored and
+  queryable.
+- Failed message visibility: Any campaign message that fails to deliver (or for
+  which WhatsApp returns an error) is logged with its failure status, identifiable,
+  and visible to the administrator in the campaign dashboard, so delivery failures
+  can be monitored and addressed. (Note: automatic retry of failed messages remains
+  out of Phase 1 scope.)
+
+4.8 Campaign Dashboard
+- View all active campaigns.
+- See how many contacts are at each sequence step.
+- Monitor campaign progress.
+
+4.9 Campaign Performance Report
+- Per-campaign statistics: Messages sent, Delivery rate, Response rate, Number entering
+  the sales flow, Number converted. (Metric definitions agreed in Section 8.)
+
+4.10 Contact List Targeting
+- Select which contacts/groups to target for each campaign (uses the existing
+  broadcast contact system).
+
+4.11 Customer Profile Extension
+- Lead profiles extended with: campaign history, last contact date, last response,
+  rejection reason.
+
+4.12 No-Response Flagging
+- Customers who do not respond after the final sequence step are flagged for nurture
+  (the flag feeds Phase 2 nurture campaigns; Phase 2 itself is not part of Phase 1).
+
+
+================================================================================
+5. MULTIPLE & SIMULTANEOUS CAMPAIGNS
+================================================================================
+- Layla can run multiple campaigns simultaneously (e.g. a Telkom Fibre Promotion to
+  one group and a Telkom LTE Promotion to another).
+- Targeting is manual in Phase 1: the appropriate campaign is assigned per contact
+  list/group at setup.
+- Automatic rules-based segmentation / dynamic campaign assignment is Phase 2 and is
+  not included.
+
+
+================================================================================
+6. DUPLICATE & CONFLICTING MESSAGES
+================================================================================
+- Duplicate sends (the same message sent twice to the same customer within a sequence)
+  are prevented by sequence/send tracking.
+- Automatic conflict prevention across overlapping campaigns (campaign priority,
+  exclusion rules, "customers never receive contradictory messages") is Phase 2 and
+  is not included.
+- In Phase 1, a customer is enrolled in one active campaign at a time per list;
+  targeting is managed by the client via lists. If one contact appears in two different
+  groups that are both run, Phase 1 does not automatically arbitrate between them.
+
+
+================================================================================
+7. PHASE 1 EXTENDED CONTROLS & VISIBILITY BUNDLE
+================================================================================
+The three items below are added to Phase 1 as bounded, basic additions.
+
+7.1 Basic Manual Controls
+- Manual status override: An administrator can set a customer's status manually.
+- Manual classification correction: An administrator can correct a specific response
+  classification; the correction is stored against the customer and applied to tune
+  classification prompts going forward.
+- Manual campaign removal: An administrator can remove a customer from a campaign
+  immediately, stopping further scheduled messages.
+- Audit trail for manual changes: Every manual change to a customer's status or
+  classification is recorded with an audit trail showing the original value, the
+  amended value, the user who made the change, and the date/time of the change.
+- Boundary: This is a manual correction interface. The correction is stored and used
+  to refine prompts. The full self-improving/automated re-learning pipeline is
+  excluded (later phase).
+
+7.2 Basic, Robust Backups
+- Automated daily database backups with retention beyond the free-tier limit.
+- A documented restore path for customer, campaign, and interaction data, tested
+  once at handover.
+- Boundary: Basic but robust - daily backups plus a restore path. Formal disaster
+  recovery, defined RPO/RTO targets, and recovery drills are excluded (later phase).
+  Enabled on Supabase Pro (ongoing cost, Section 2).
+
+7.3 Basic Customer Journey Visibility
+- A simple, customer-level "what happened" record view: for a selected customer,
+  show campaign(s), current step/status, last response, classification, and outcome
+  (i.e. Campaign -> Customer -> What happened, as a flat record).
+- Boundary: A basic record view, not the Phase 3 visual journey timeline. No funnels,
+  no animated timeline, no cohort views.
+
+
+================================================================================
+8. METRIC DEFINITIONS (AGREED)
+================================================================================
+The following operating definitions apply to Phase 1 reporting (Section 4.9):
+
+- Response: A customer replies to a campaign message (WhatsApp inbound detected
+  by the system).
+- Entered sales flow: A responding customer is routed out of the campaign sequence
+  into the existing Layla sales flow.
+- Conversion: The existing sales-flow definition of a completed/converted sale (as
+  currently tracked in the lead system).
+- Delivery rate: Delivered messages / messages sent.
+- Read rate: Read receipts / delivered messages (where WhatsApp provides read data).
+
+
+================================================================================
+9. OUT OF SCOPE (PHASE 1)
+================================================================================
+The following are explicitly not included in Phase 1. Any request for these is a
+change request or a later phase:
+
+1. Mobile application development (dashboard is web-based, responsive).
+2. Integration with third-party CRM systems (HubSpot, Salesforce, ISP/CRM, etc.).
+3. Google Sheets sync.
+4. SMS / email campaign channels (WhatsApp only).
+5. Voice / IVR integration.
+6. Custom AI model training or fine-tuning.
+7. Automatic rules-based segmentation / dynamic campaign assignment (Phase 2).
+8. Automatic conflict prevention, campaign priority, exclusion rules (Phase 2).
+9. Nurture campaigns + context-aware nurture (Phase 2).
+10. Full Customer Intelligence Profile feeding Layla context (Phase 2).
+11. Visual campaign journey timeline per customer (Phase 3).
+12. Pause/resume with mid-sequence state restoration; per-customer pause/restart;
+    "manually trigger next step" not included in Phase 1.
+13. Self-learning classification pipeline (beyond stored manual corrections).
+14. Formal failed-message auto-retry rules.
+15. Formal campaign-data CSV export (lead export already exists).
+16. Automatic in-flight workflow resume on service restore.
+17. Cleaning/mapping of a non-template external data export (the template upload
+    itself is free and already live).
+18. Performance optimisation / load testing beyond the current data volume.
+19. Advanced backup / disaster-recovery SLA with tested drills (basic backups are
+    included in 7.2).
+
+
+================================================================================
+10. MILESTONES & ACCEPTANCE
+================================================================================
+10.1 Milestones (indicative, for progress tracking)
+- M1: Data model & campaign schema (campaign, sequence, enrolment, interaction,
+      classification storage)
+- M2: Campaign Creator + sequence configuration + list targeting
+- M3: Follow-up / sequence progression engine (scheduled sends)
+- M4: Response detection & routing into sales flow + intent classification + "not
+      interested" reason capture
+- M5: Manual controls (7.1) + basic customer journey view (7.3)
+- M6: Campaign dashboard + performance reporting
+- M7: Backups (7.2) + error/warning handling
+- M8: Testing, QA, template coordination
+- M9: Controlled pilot & acceptance
+
+Milestones are for visibility and may be reported against during development.
+Estimated Phase 1 duration remains 2-3 months. WhatsApp template submission to Meta
+(24-48h per template) is not counted against development time.
+
+10.2 Acceptance
+- Phase 1 is considered delivered when every feature in Section 4 and Section 7
+  passes its acceptance criterion.
+- Each Section 4/7 feature constitutes a checklist item; the full list is the Phase 1
+  acceptance checklist.
+- Acceptance includes a controlled pilot against a limited number of customers/test
+  numbers, to be run before final sign-off (Section 10.3).
+- The final payment is due on completion of the pilot and written acceptance of
+  the Phase 1 scope.
+
+10.3 Controlled Pilot
+- Before final acceptance and the final payment, the client will conduct a controlled
+  pilot against a limited number of customers/test numbers.
+- The pilot verifies the Phase 1 acceptance checklist in a live environment with a
+  small, controlled audience.
+- Pilot scope (number of test contacts, campaigns) is agreed in writing before the
+  pilot begins.
+- The pilot is the test-and-accept step. It does not defer the final payment:
+  acceptance (including the pilot) and the final payment are the same gate.
+
+
+================================================================================
+11. CHANGE REQUESTS
+================================================================================
+Any feature, modification, or addition outside this frozen scope is a change
+request and is handled as follows:
+
+1. The client requests a change (verbally or in writing).
+2. OWD Solutions responds in writing within 3 business days, stating whether it is
+   in scope or a change request, the estimated additional cost (if any), and the
+   impact on timeline (if any).
+3. If accepted by the client, the change is added to the scope in writing and
+   development proceeds.
+4. If not accepted, the change is deferred or dropped.
+5. No change request work begins until the client has approved the additional cost
+   and timeline in writing.
+
+Included without a change request:
+- Bug fixes for features delivered in Phase 1 (within the 1-month warranty).
+- Minor adjustments (label changes, default values, list reordering).
+- Configuration changes (campaign timing, adding a template to an existing campaign type).
+- Reasonable refinement of AI prompts and classification logic to improve accuracy.
+- WhatsApp template submission to Meta (technical submission; content writing is
+  the client's responsibility).
+
+
+================================================================================
+12. CLIENT RESPONSIBILITIES & INPUTS
+================================================================================
+The following are required from the client and are not development work:
+- Campaign content: message copy for each campaign (the system delivers; the client
+  defines content and tone).
+- Campaign rules: eligibility, timing, exit conditions, success metrics.
+- Data upload: the client uploads existing leads/customer data via the existing OWD
+  template (free, already live).
+- WhatsApp template content and Meta account access for submission.
+- Metric validation: confirmation of the definitions in Section 8.
+
+
+================================================================================
+13. OWNERSHIP, ACCESS & WARRANTY
+================================================================================
+13.1 Ownership
+- Customer data and campaign/business data: owned by Horizon Africa, fully and
+  unconditionally.
+- Custom source code developed specifically for and paid for under this project is
+  assigned to Horizon Africa in full on receipt of the final payment. Horizon Africa
+  owns the Phase 1 custom source code outright, with rights that are perpetual,
+  irrevocable, and royalty-free, including the unrestricted right to use, modify,
+  reproduce, and further develop it.
+- Horizon Africa has the unrestricted right to appoint another developer or
+  development team in the future to maintain, modify, and further develop the
+  system, without any restriction or further payment to OWD Solutions.
+- The assignment covers custom code developed specifically for this project. It does
+  not extend to OWD Solutions' pre-existing proprietary code, libraries, templates,
+  or third-party/open-source components or services (e.g. Supabase, n8n, OpenRouter,
+  WhatsApp Business API), for which Horizon Africa receives a perpetual right to use
+  as integrated in the delivered solution.
+- Full administrative access to all relevant systems (dashboard, Supabase database,
+  n8n, Vercel, WhatsApp setup) is provided at delivery, including credentials, so the
+  client can maintain or migrate the system in future.
+
+13.2 Warranty (1 month per phase)
+- The warranty covers bug fixes related to the agreed Phase 1 scope for one month
+  from delivery/acceptance.
+- Covered: defects where delivered Phase 1 functionality does not behave as specified
+  in this document - including workflow failures, incorrect campaign transitions,
+  implementation-caused classification errors, implementation-caused WhatsApp
+  integration failures, reporting discrepancies, and regression of previously-working
+  Phase 1 functionality.
+- Not covered: failures of third-party services outside OWD control (Meta/WhatsApp
+  outages, OpenRouter outages, n8n platform issues), changes to data made by the
+  client, and anything outside this scope.
+
+13.3 Defect vs Change-Request
+- A defect is a Phase 1 feature behaving contrary to this document's spec -> corrected
+  at no additional cost within the warranty.
+- A change request is new or different functionality beyond this document -> quoted
+  separately.
+- The test is this document: if the built system does not match Section 4/7 as written,
+  it is a defect; if the client wants behaviour beyond Section 4/7, it is a change
+  request.
+
+
+================================================================================
+14. SIGNATURE
+================================================================================
+Acceptance of this document freezes the Phase 1 scope and authorises commencement
+of development on receipt of the upfront payment.
+
+Client - Horizon Africa
+Name: ______________________
+Signature: _________________
+Date: ______________________
+
+OWD Solutions
+Name: Mohamed Osman
+Signature: _________________
+Date: ______________________
+
+Layla Phase 1 Scope Freeze
+Quote ref: Q-2026-0825-HC-CAMPAIGN
