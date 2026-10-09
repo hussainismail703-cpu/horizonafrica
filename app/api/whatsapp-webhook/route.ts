@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { detectAndMarkCampaignResponse, extractInboundMessage } from "@/lib/campaign-detection";
 import { classifyResponse } from "@/lib/classification";
-import { extractStatusUpdates, recordDeliveryFailures } from "@/lib/delivery-status";
+import { extractStatusUpdates, recordDeliveryFailures, recordDeliveryStatuses } from "@/lib/delivery-status";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN ?? "horizon_africa_verify_2026";
@@ -161,12 +161,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Meta reports delivery outcomes asynchronously via status callbacks on
-    // this same webhook (sent/delivered/read/failed). Persist failures so
-    // sends that Meta accepted but could not deliver are visible, and alert
-    // staff — otherwise they are silently marked as sent.
+    // this same webhook (sent/delivered/read/failed). Update the originating
+    // campaign interaction / broadcast message so delivery and read-rate
+    // metrics reflect reality, persist failures for visibility, and alert
+    // staff on failures — otherwise they are silently marked as sent.
     if (parsed) {
       try {
-        const failures = await recordDeliveryFailures(extractStatusUpdates(parsed));
+        const statuses = extractStatusUpdates(parsed);
+        await recordDeliveryStatuses(statuses);
+        const failures = await recordDeliveryFailures(statuses);
         for (const f of failures) {
           await sendErrorAlert(
             `WhatsApp delivery failed to ${f.recipient_phone}: ` +

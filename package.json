@@ -13,21 +13,21 @@
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/postcss": "^4.1.4",
     "lucide-react": "^0.501.0",
-    "next": "15.4.x",
+    "next": "^15.5.27",
     "playwright": "^1.62.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.4",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.25.1",
-    "eslint-config-next": "15.3.1",
+    "eslint-config-next": "^15.5.27",
     "typescript": "^5.8.3"
   }
 }

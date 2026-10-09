@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Conversation, LeadScore } from "@/lib/types";
+import { useEffect, useState, useMemo } from "react";
+import { Conversation, ConversationThread, LeadScore } from "@/lib/types";
 import { extractMessageText } from "@/lib/utils";
 import { formatDate, formatTime } from "@/lib/format";
 import { ScoreBadge } from "@/components/score-badge";
-import { Search, X, MessageSquare, Bot, Send } from "lucide-react";
+import { Search, X, MessageSquare, Bot, Send, Loader2 } from "lucide-react";
 
 interface ConversationViewProps {
-  conversations: Conversation[];
+  // One row per phone thread (latest message + message_count) — the view
+  // keeps this cheap regardless of total conversation volume.
+  threads: ConversationThread[];
   // Live lead scores keyed by phone — conversation rows only snapshot the
   // score at message time, so callers can pass current values to overlay.
   leadScores?: Record<string, LeadScore>;
@@ -16,42 +18,60 @@ interface ConversationViewProps {
 
 const scoreOptions: (LeadScore | "ALL")[] = ["ALL", "HOT", "WARM", "COLD"];
 
-export function ConversationView({ conversations, leadScores }: ConversationViewProps) {
+export function ConversationView({ threads, leadScores }: ConversationViewProps) {
   const [search, setSearch] = useState("");
   const [scoreFilter, setScoreFilter] = useState<LeadScore | "ALL">("ALL");
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedMessages, setSelectedMessages] = useState<Conversation[]>([]);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null);
 
-  const scoreOf = (c: Conversation): LeadScore =>
-    leadScores?.[c.phone_number] ?? c.lead_score;
+  const scoreOf = (t: ConversationThread): LeadScore =>
+    leadScores?.[t.phone_number] ?? t.lead_score;
 
   const filtered = useMemo(() => {
-    return conversations.filter((c) => {
+    return threads.filter((t) => {
       const matchesSearch =
         !search ||
-        c.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.phone_number.includes(search);
-      const matchesScore = scoreFilter === "ALL" || scoreOf(c) === scoreFilter;
+        t.contact_name?.toLowerCase().includes(search.toLowerCase()) ||
+        t.phone_number.includes(search);
+      const matchesScore = scoreFilter === "ALL" || scoreOf(t) === scoreFilter;
       return matchesSearch && matchesScore;
     });
-  }, [conversations, leadScores, search, scoreFilter]);
+  }, [threads, leadScores, search, scoreFilter]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, Conversation[]>();
-    filtered.forEach((c) => {
-      const key = c.phone_number;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(c);
-    });
-    return Array.from(map.entries()).sort((a, b) => {
-      const aLast = a[1][0];
-      const bLast = b[1][0];
-      return new Date(bLast.created_at).getTime() - new Date(aLast.created_at).getTime();
-    });
-  }, [filtered]);
-
-  const selectedMessages = selectedPhone
-    ? conversations.filter((c) => c.phone_number === selectedPhone).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    : [];
+  // Lazy-load the selected thread's messages so page load stays fast no
+  // matter how many total messages exist.
+  useEffect(() => {
+    if (!selectedPhone) {
+      setSelectedMessages([]);
+      setThreadError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingThread(true);
+    setThreadError(null);
+    fetch(`/api/conversations?phone=${encodeURIComponent(selectedPhone)}&limit=500`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled) setSelectedMessages(data.messages ?? []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setThreadError(err instanceof Error ? err.message : "Failed to load");
+          setSelectedMessages([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingThread(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPhone]);
 
   return (
     <div className="flex h-[calc(100vh-180px)] gap-4">
@@ -86,29 +106,28 @@ export function ConversationView({ conversations, leadScores }: ConversationView
         </div>
 
         <div className="flex-1 space-y-1 overflow-y-auto p-2">
-          {grouped.length > 0 ? (
-            grouped.map(([phone, msgs]) => {
-              const last = msgs[0];
-              const isSelected = selectedPhone === phone;
+          {filtered.length > 0 ? (
+            filtered.map((thread) => {
+              const isSelected = selectedPhone === thread.phone_number;
               return (
                 <button
-                  key={phone}
-                  onClick={() => setSelectedPhone(phone)}
+                  key={thread.phone_number}
+                  onClick={() => setSelectedPhone(thread.phone_number)}
                   className={`w-full rounded-lg p-3 text-left transition ${
                     isSelected ? "bg-surface-container-high" : "hover:bg-surface-container-low"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-on-surface truncate">
-                      {last.contact_name ?? phone}
+                      {thread.contact_name ?? thread.phone_number}
                     </p>
-                    <ScoreBadge score={scoreOf(last)} />
+                    <ScoreBadge score={scoreOf(thread)} />
                   </div>
                   <p className="mt-1 truncate text-xs text-on-surface-variant">
-                    {extractMessageText(last.incoming_message) ?? extractMessageText(last.ai_response) ?? last.ai_response ?? "—"}
+                    {extractMessageText(thread.incoming_message) ?? extractMessageText(thread.ai_response) ?? thread.ai_response ?? "—"}
                   </p>
                   <p className="mt-1 text-[11px] text-on-surface-variant/60">
-                    {msgs.length} messages · {formatDate(last.created_at)}
+                    {thread.message_count} messages · {formatDate(thread.created_at)}
                   </p>
                 </button>
               );
@@ -129,11 +148,11 @@ export function ConversationView({ conversations, leadScores }: ConversationView
             <div className="flex items-center justify-between border-b border-outline-variant/30 px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-sm font-bold text-secondary">
-                  {(selectedMessages[0]?.contact_name ?? selectedPhone).charAt(0).toUpperCase()}
+                  {(selectedMessages[0]?.contact_name ?? threads.find((t) => t.phone_number === selectedPhone)?.contact_name ?? selectedPhone).charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <p className="font-semibold text-on-surface">
-                    {selectedMessages[0]?.contact_name ?? selectedPhone}
+                    {selectedMessages[0]?.contact_name ?? threads.find((t) => t.phone_number === selectedPhone)?.contact_name ?? selectedPhone}
                   </p>
                   <p className="text-xs text-on-surface-variant">{selectedPhone}</p>
                 </div>
@@ -150,36 +169,46 @@ export function ConversationView({ conversations, leadScores }: ConversationView
 
             {/* Messages */}
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
-              {selectedMessages.map((msg) => (
-                <div key={msg.id} className="space-y-2">
-                  {msg.incoming_message && (
-                    <div className="flex items-start gap-2">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-container-high">
-                        <MessageSquare className="h-4 w-4 text-on-surface-variant" />
-                      </div>
-                      <div className="rounded-lg rounded-tl-sm bg-surface-container-low px-4 py-2.5 max-w-[70%]">
-                        <p className="text-sm text-on-surface">{extractMessageText(msg.incoming_message)}</p>
-                        <p className="mt-1 text-[11px] text-on-surface-variant/60">
-                          {formatTime(msg.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {msg.ai_response && (
-                    <div className="flex items-start gap-2 justify-end">
-                      <div className="rounded-lg rounded-tr-sm bg-secondary px-4 py-2.5 max-w-[70%]">
-                        <p className="text-sm text-on-secondary">{extractMessageText(msg.ai_response) ?? msg.ai_response}</p>
-                        <p className="mt-1 text-[11px] text-on-secondary/70">
-                          {formatTime(msg.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-container/20">
-                        <Bot className="h-4 w-4 text-secondary" />
-                      </div>
-                    </div>
-                  )}
+              {loadingThread ? (
+                <div className="flex h-full items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-on-surface-variant/50" />
                 </div>
-              ))}
+              ) : threadError ? (
+                <p className="py-8 text-center text-sm text-destructive">
+                  Failed to load messages: {threadError}
+                </p>
+              ) : (
+                selectedMessages.map((msg) => (
+                  <div key={msg.id} className="space-y-2">
+                    {msg.incoming_message && (
+                      <div className="flex items-start gap-2">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-container-high">
+                          <MessageSquare className="h-4 w-4 text-on-surface-variant" />
+                        </div>
+                        <div className="rounded-lg rounded-tl-sm bg-surface-container-low px-4 py-2.5 max-w-[70%]">
+                          <p className="text-sm text-on-surface">{extractMessageText(msg.incoming_message)}</p>
+                          <p className="mt-1 text-[11px] text-on-surface-variant/60">
+                            {formatTime(msg.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {msg.ai_response && (
+                      <div className="flex items-start gap-2 justify-end">
+                        <div className="rounded-lg rounded-tr-sm bg-secondary px-4 py-2.5 max-w-[70%]">
+                          <p className="text-sm text-on-secondary">{extractMessageText(msg.ai_response) ?? msg.ai_response}</p>
+                          <p className="mt-1 text-[11px] text-on-secondary/70">
+                            {formatTime(msg.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-container/20">
+                          <Bot className="h-4 w-4 text-secondary" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Input Area (decorative - matches stitch design) */}

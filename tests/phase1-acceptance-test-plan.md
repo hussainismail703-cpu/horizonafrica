@@ -239,3 +239,84 @@ clean, or the `template_parameters` product bug which was fixed and re-verified
 
 The 1,719-lead pilot enrolment remains a separate launch decision and is out of
 scope for this acceptance pass.
+
+---
+
+## 10. Pre-Launch "Break the App" Audit (2026-10-03)
+
+A second adversarial pass beyond the ~990-test suite, covering live-defect
+verification, failure injection, launch-scale behaviour, session/UX edge cases,
+and security extras. Full checklist: `tests/prelaunch-audit.md`.
+Suite: `node --env-file=.env.local tests/prelaunch-audit.mjs`.
+
+### 10.1 Defects confirmed and fixed
+
+| Defect | Fix |
+|--------|-----|
+| Follow-ups cron was dead code (middleware 307 → n8n reported success-no-op; cookie client under RLS) | Middleware exemption + `createServiceClient` + n8n URL corrected — verified `processed=1` live |
+| Bulk enrolment `.in()` URL overflow | Chunked at 200 + insert batches of 500 — 1,719 phones enrolled in 8.5s |
+| Sequential campaign process vs 60s limit | Worker pool (8) + 45s budget, clean deferral |
+| Duplicate-send race | Unique index + atomic claim-before-send; concurrent invocations verified single-send |
+| Broadcast stuck `sending`, no `maxDuration` | Budget + concurrency + periodic progress + `partial` status |
+| Delivered/read receipts discarded | `campaign_interactions` monotonic updates + `broadcast_messages` + history counters via trigger |
+| CSV formula injection | `= + - @ \t \r` cells prefixed with `'` |
+| Settings hardcoded wrong statuses | Brevo + Chatwoot now "connected" (live via n8n) |
+| Unbounded conversations query | `conversation_threads` view + lazy `/api/conversations` per-thread load |
+| `xlsx@0.18.5` CVEs | SheetJS 0.20.3 CDN tarball; Next 15.4.11→15.5.27 for critical advisory |
+| Bulk import dupes | Payload dedupe + unique index + `ignoreDuplicates` upsert |
+| Inbound wamid TOCTOU | `uq_campaign_interactions_meta_message_id` index — concurrent delivery now single-records |
+| `broadcast_messages` RLS insert | Policy added (was silently dropping per-message rows) |
+
+### 10.2 Results
+
+**41 passed, 0 failed, 0 security, 11 manual.**
+
+Notable evidence: 1,719-phone enrolment 8.5s; concurrent `process` calls → 1 send;
+sent→delivered→read monotonic with no downgrade; broadcast counters via trigger;
+15-webhook flood all 200s; `x-middleware-subrequest` does not bypass auth; no
+secrets in client bundles; error responses don't leak internals.
+
+### 10.3 Outstanding manual / accepted items
+
+- Backup/restore drill, health→alert chain, Vercel env audit, signature
+  enforcement rollout, token-revocation alerting, alert-email dedupe,
+  deploy/migration rollback drill, POPIA workflows — see §D checklist in
+  `tests/prelaunch-audit.md`.
+- Accepted risks: no rate limiting on authenticated write endpoints
+  (single-tenant internal tool); non-timing-safe Bearer compare; leads page
+  and `/api/reports` remain unbounded-capped (documented for post-launch
+  pagination); remaining `npm audit` findings need Next 16 or dev-only deps.
+
+### 10.4 Go/No-Go
+
+**GO, conditional on §10.3 manual items.** All client-blocking defects found
+by the audit are fixed and verified green. The 1,719-lead enrolment path is
+proven at full scale; the send path is race-safe, budgeted, and observable.
+
+### 10.5 Post-audit regression re-verification (2026-10-04)
+
+Full master retest run on `prelaunch-audit` @ `d105939` to confirm the §10.1
+fixes introduced no regressions.
+
+| Suite | Result | Notes |
+|---|---|---|
+| Pre-flight | 26/26 | |
+| UI — dashboard | 107/112 headed, **125/125 isolated re-run** | Follow-ups/Templates/Reports nav + Products + Forgot-password failures were resource degradation late in the ~2 h headed run; all pass clean on re-run |
+| UI — campaign engine | 76/76 | |
+| Campaign response | 45/45 | |
+| Client simulation | 40/40 | |
+| Advanced simulation | 47/47 | |
+| Comprehensive | 64/64 | |
+| Chaos / destructive | 156/156 | 0 security issues |
+| AI conversation | 57/59, **B1+B2 pass on isolated re-run** | Timeout + `fetch failed` under load; both scenarios verified passing standalone |
+| Workflow e2e | 67/67 | 3 warnings, 3 expected n8n-pending markers |
+| Webhook security | 27/27 | |
+| Prompt injection | 15/15 | |
+| Gap tests | 41/41 | |
+| Post-release | 25/25 | 0 warnings — mobile pane, location, score-lock, JEV chain |
+| Prelaunch audit re-check | 41/41 | 0 security issues |
+
+**Verdict: no product defects found.** All 7 master-retest failures confirmed
+as environmental flakes via isolated re-runs. Conversations module refactor
+(`conversation_threads`) and campaign claim-before-send changes specifically
+validated by the conversations, campaign-response, and chaos suites.
