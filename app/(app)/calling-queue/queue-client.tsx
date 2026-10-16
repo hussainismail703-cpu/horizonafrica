@@ -192,7 +192,7 @@ export function CallingQueueClient({ items, campaigns }: CallingQueueClientProps
                 <tr>
                   <th className="px-4 py-3 font-semibold">Name / Phone</th>
                   <th className="px-4 py-3 font-semibold">Campaign</th>
-                  <th className="px-4 py-3 font-semibold">Package</th>
+                  <th className="px-4 py-3 font-semibold">Item</th>
                   <th className="px-4 py-3 font-semibold">Request</th>
                   <th className="px-4 py-3 font-semibold">Callback Time</th>
                   <th className="px-4 py-3 font-semibold">Status</th>

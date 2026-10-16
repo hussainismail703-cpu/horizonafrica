@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2, X, Package, Wifi, Zap, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Package, Shirt, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Product {
@@ -20,7 +20,7 @@ interface Product {
   updated_at: string;
 }
 
-const PRODUCT_TYPES = ["fibre", "lte", "wireless", "other"];
+const PRODUCT_TYPES = ["abaya", "dress", "scarf", "modest_wear", "other"];
 const BILLING_PERIODS = ["monthly", "once-off"];
 
 function formatPrice(cents: number | null): string {
@@ -31,11 +31,18 @@ function formatPrice(cents: number | null): string {
 
 function typeIcon(type: string) {
   switch (type) {
-    case "fibre": return Wifi;
-    case "lte": return Zap;
-    case "wireless": return Zap;
+    case "abaya":
+    case "dress":
+    case "scarf":
+    case "modest_wear": return Shirt;
     default: return Package;
   }
+}
+
+function formatType(type: string): string {
+  return type
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function ProductManager() {
@@ -149,7 +156,7 @@ export function ProductManager() {
                       )}
                     </div>
                     <p className="mt-0.5 text-sm text-on-surface-variant">
-                      {product.product_type.toUpperCase()}
+                      {formatType(product.product_type)}
                       {product.speed_down && ` · ${product.speed_down}${product.speed_up ? `/${product.speed_up}` : ""} Mbps`}
                       {" · "}
                       <span className="font-semibold text-on-surface">{formatPrice(product.price_cents)}</span>
@@ -225,9 +232,7 @@ function ProductForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState(product?.name ?? "");
-  const [productType, setProductType] = useState(product?.product_type ?? "fibre");
-  const [speedDown, setSpeedDown] = useState(product?.speed_down?.toString() ?? "");
-  const [speedUp, setSpeedUp] = useState(product?.speed_up?.toString() ?? "");
+  const [productType, setProductType] = useState(product?.product_type ?? "abaya");
   const [priceRands, setPriceRands] = useState(
     product?.price_cents !== null && product?.price_cents !== undefined
       ? (product.price_cents / 100).toString()
@@ -235,7 +240,6 @@ function ProductForm({
   );
   const [billingPeriod, setBillingPeriod] = useState(product?.billing_period ?? "monthly");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [isUncapped, setIsUncapped] = useState(product?.is_uncapped ?? true);
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [displayOrder, setDisplayOrder] = useState(product?.display_order?.toString() ?? "0");
 
@@ -246,12 +250,12 @@ function ProductForm({
       id: product?.id,
       name,
       product_type: productType,
-      speed_down: speedDown === "" ? null : parseInt(speedDown),
-      speed_up: speedUp === "" ? null : parseInt(speedUp),
+      speed_down: product?.speed_down ?? null,
+      speed_up: product?.speed_up ?? null,
       price_cents: priceCents,
       billing_period: billingPeriod,
       description: description || null,
-      is_uncapped: isUncapped,
+      is_uncapped: product?.is_uncapped ?? false,
       is_active: isActive,
       display_order: parseInt(displayOrder) || 0,
     });
@@ -279,7 +283,7 @@ function ProductForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              placeholder="e.g. 50/25 Mbps Fibre"
+              placeholder="e.g. Midnight Abaya — Black"
               className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
             />
           </div>
@@ -315,33 +319,6 @@ function ProductForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Download Speed (Mbps)
-              </label>
-              <input
-                type="number"
-                value={speedDown}
-                onChange={(e) => setSpeedDown(e.target.value)}
-                placeholder="e.g. 50"
-                className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Upload Speed (Mbps)
-              </label>
-              <input
-                type="number"
-                value={speedUp}
-                onChange={(e) => setSpeedUp(e.target.value)}
-                placeholder="e.g. 25"
-                className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
-              />
-            </div>
-          </div>
-
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Price (R) — leave empty for &quot;price on request&quot;
@@ -369,7 +346,7 @@ function ProductForm({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
                 Display Order
@@ -381,15 +358,6 @@ function ProductForm({
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
               />
             </div>
-            <label className="flex items-center gap-2 pt-6">
-              <input
-                type="checkbox"
-                checked={isUncapped}
-                onChange={(e) => setIsUncapped(e.target.checked)}
-                className="h-4 w-4 rounded border-outline-variant"
-              />
-              <span className="text-sm text-on-surface">Uncapped</span>
-            </label>
             <label className="flex items-center gap-2 pt-6">
               <input
                 type="checkbox"

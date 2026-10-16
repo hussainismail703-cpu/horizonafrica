@@ -345,10 +345,10 @@ function LeadDetailDrawer({ lead, onClose, onSaved }: { lead: Lead; onClose: () 
                 </div>
                 <Field label="Email" value={currentLead.email} />
                 <Field label="Product Interest" value={currentLead.product_interest} />
-                <Field label="Recommended Package" value={currentLead.recommended_package} />
-                <Field label="Offered Package" value={currentLead.offered_package} />
-                <Field label="Household Size" value={currentLead.household_size} />
-                <Field label="Internet Usage" value={currentLead.internet_usage} />
+                <Field label="Recommended Garment" value={currentLead.recommended_package} />
+                <Field label="Offered Garment" value={currentLead.offered_package} />
+                <Field label="Size" value={currentLead.household_size} />
+                <Field label="Style / Occasion" value={currentLead.internet_usage} />
                 <Field label="Physical Address" value={currentLead.physical_address} fullWidth />
                 <Field label="Preferred Contact Number" value={currentLead.preferred_contact_number} />
                 <Field label="Notes" value={currentLead.notes} fullWidth />

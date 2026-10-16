@@ -23,7 +23,7 @@ export async function GET() {
   return new NextResponse(buf, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": 'attachment; filename="horizon-africa-contacts-template.xlsx"',
+      "Content-Disposition": 'attachment; filename="eastern-wear-contacts-template.xlsx"',
     },
   });
 }

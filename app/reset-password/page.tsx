@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
             <div className="relative mb-4 h-28 w-56">
               <Image
                 src={logo}
-                alt="Horizon Africa"
+                alt="Eastern Wear by Kersh"
                 fill
                 className="object-contain"
                 priority

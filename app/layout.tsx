@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Horizon Africa | Dashboard",
-  description: "WhatsApp AI sales platform dashboard for Horizon Africa",
+  title: "Eastern Wear by Kersh | Dashboard",
+  description: "WhatsApp AI sales platform dashboard for Eastern Wear by Kersh",
 };
 
 export default function RootLayout({
