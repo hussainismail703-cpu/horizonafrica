@@ -36,3 +36,5 @@ tests/*-results.json
 backups/
 repurpose/*.pages
 repurpose/*env*.txt
+repurpose/*env*.md
+repurpose/*.rtf

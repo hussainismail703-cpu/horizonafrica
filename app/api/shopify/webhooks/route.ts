@@ -6,7 +6,43 @@ import {
   upsertShopifyProduct,
 } from "@/lib/shopify-sync";
 import { createServiceClient } from "@/lib/supabase/service";
+import { markOrderPaid, paidOrderIdentifiers } from "@/lib/orders";
 import { ShopifyCustomer, ShopifyProduct } from "@/lib/shopify";
+import type { Order } from "@/lib/types";
+
+async function notifyOrderPaid(order: Order, payload: Record<string, unknown>) {
+  const url = process.env.N8N_ORDER_PAID_URL ?? process.env.N8N_ORDER_PAID_WEBHOOK_URL;
+  if (!url) {
+    await createServiceClient().from("order_events").insert({
+      order_id: order.id,
+      event: "paid_notification_skipped",
+      detail: { reason: "N8N_ORDER_PAID_URL not configured" },
+    });
+    return;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order, shopify_order: payload }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`n8n order-paid webhook → HTTP ${res.status}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  await createServiceClient().from("order_events").insert({
+    order_id: order.id,
+    event: "paid_notification_sent",
+    detail: { url: new URL(url).pathname },
+  });
+}
 
 // POST /api/shopify/webhooks
 // Receives Shopify webhook deliveries. HMAC is verified against
@@ -16,7 +52,7 @@ import { ShopifyCustomer, ShopifyProduct } from "@/lib/shopify";
 // topic processing then runs in after() so Shopify gets a fast 200.
 //
 // Topics:
-//   orders/paid            → logged, consumed by M3 order flow
+//   orders/paid            → match Layla order, mark paid, notify n8n for confirmation/staff alert
 //   products/update        → incremental product+variant upsert
 //   products/delete        → product+variants deactivated
 //   customers/create|update→ shopify_customers upsert + lead phone link
@@ -45,10 +81,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Durably log the event first — even if processing is killed mid-flight,
-  // the unprocessed row keeps it recoverable.
+  // the unprocessed row keeps it recoverable. shopify_id carries the unique
+  // X-Shopify-Webhook-Id delivery id, so a Shopify retry hits the unique index
+  // (23505) and is acknowledged without re-processing.
   let eventId: string | null = null;
   try {
-    const { data } = await createServiceClient()
+    const { data, error: insertError } = await createServiceClient()
       .from("shopify_webhook_events")
       .insert({
         topic,
@@ -57,7 +95,27 @@ export async function POST(req: NextRequest) {
       })
       .select("id")
       .single();
-    eventId = data?.id ?? null;
+    if (insertError) {
+      if (insertError.code !== "23505") throw insertError;
+      // Same delivery id seen before. If the earlier attempt already
+      // processed cleanly this is a pure retry — ack and drop it. If it
+      // failed or never finished, reprocess under the existing event row.
+      const { data: existing } = await createServiceClient()
+        .from("shopify_webhook_events")
+        .select("id, processed")
+        .eq(
+          "shopify_id",
+          webhookId ?? (payload.id != null ? String(payload.id) : "")
+        )
+        .limit(1)
+        .maybeSingle();
+      if (!existing || existing.processed) {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      eventId = existing.id;
+    } else {
+      eventId = data?.id ?? null;
+    }
   } catch (err) {
     console.error("[shopify-webhook] failed to log event:", err);
   }
@@ -78,9 +136,19 @@ export async function POST(req: NextRequest) {
         case "customers/update":
           await upsertShopifyCustomer(supabase, payload as unknown as ShopifyCustomer);
           break;
-        case "orders/paid":
-          // Consumed by M3's order flow — the logged event row is the handoff.
+        case "orders/paid": {
+          const identifiers = paidOrderIdentifiers(payload);
+          const paid = await markOrderPaid(supabase, identifiers);
+          if (!paid.matched) {
+            throw new Error(
+              `orders/paid received with no matching Layla order (shopify_order_id=${identifiers.shopifyOrderId ?? "unknown"})`
+            );
+          }
+          if (!paid.alreadyPaid) {
+            await notifyOrderPaid(paid.order, payload);
+          }
           break;
+        }
         default:
           break;
       }
