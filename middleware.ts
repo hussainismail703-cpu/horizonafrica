@@ -47,7 +47,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/campaigns/process" ||
     pathname === "/api/campaigns/classify" ||
     pathname === "/api/follow-ups/cron" ||
-    pathname === "/api/health";
+    pathname === "/api/health" ||
+    pathname.startsWith("/api/shopify/"); // routes self-auth (APP_SECRET bearer / HMAC)
 
   if (!user && !isAuthPage && !isPublicApi) {
     const url = request.nextUrl.clone();
