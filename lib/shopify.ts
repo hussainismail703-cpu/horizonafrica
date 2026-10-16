@@ -4,14 +4,82 @@ import crypto from "crypto";
  * Server-side Shopify Admin API client (plain fetch — no SDK).
  *
  * Env:
- *   SHOPIFY_STORE_DOMAIN        e.g. "easternwearbykersh.myshopify.com"
- *   SHOPIFY_ADMIN_ACCESS_TOKEN  Admin API access token (shpat_…)
- *   SHOPIFY_API_VERSION         e.g. "2025-01"
- *   SHOPIFY_WEBHOOK_SECRET      webhook signing secret from Shopify admin
+ *   SHOPIFY_STORE_DOMAIN        e.g. "rvadvz-kk.myshopify.com"
+ *   SHOPIFY_API_VERSION         e.g. "2026-10"
+ *   SHOPIFY_ADMIN_ACCESS_TOKEN  static Admin API token (shpat_…), if used
+ *   SHOPIFY_CLIENT_ID           Dev Dashboard app client id (token grant)
+ *   SHOPIFY_CLIENT_SECRET       Dev Dashboard app client secret (shpss_…)
+ *   SHOPIFY_WEBHOOK_SECRET      webhook signing key — whichever key actually
+ *                               signs the registered webhooks (Notifications →
+ *                               Webhooks page key, or the client secret for
+ *                               app-registered webhooks)
+ *
+ * Auth: this is a Dev Dashboard app — there is no permanent token. Tokens are
+ * obtained via the client_credentials grant and cached in memory; they expire
+ * after ~24h so they are refreshed on expiry and retried once on HTTP 401.
+ * A static SHOPIFY_ADMIN_ACCESS_TOKEN, if set, takes precedence.
  *
  * `isShopifyConfigured()` lets callers degrade gracefully (503) while
  * credentials are pending, rather than crashing on undefined env vars.
  */
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+let tokenPromise: Promise<string> | null = null;
+
+async function requestToken(): Promise<string> {
+  const domain = process.env.SHOPIFY_STORE_DOMAIN!;
+  const clientId = process.env.SHOPIFY_CLIENT_ID;
+  const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "Shopify credentials missing: set SHOPIFY_ADMIN_ACCESS_TOKEN or SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET"
+    );
+  }
+  const res = await fetch(`https://${domain}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "client_credentials",
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      `Shopify token request → HTTP ${res.status}: ${text.slice(0, 300)}`
+    );
+  }
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in?: number;
+  };
+  // Refresh 5 minutes before the stated expiry (~24h).
+  const ttlMs = Math.max((data.expires_in ?? 86399) - 300, 60) * 1000;
+  cachedToken = { token: data.access_token, expiresAt: Date.now() + ttlMs };
+  return data.access_token;
+}
+
+/** Resolve an Admin API token: static env wins, else cached/refresh grant. */
+export function getAccessToken(): Promise<string> {
+  const staticToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+  if (staticToken) return Promise.resolve(staticToken);
+
+  const now = Date.now();
+  if (cachedToken && cachedToken.expiresAt > now + 60_000) {
+    return Promise.resolve(cachedToken.token);
+  }
+  if (!tokenPromise) {
+    tokenPromise = requestToken().finally(() => {
+      tokenPromise = null;
+    });
+  }
+  return tokenPromise;
+}
+
+function invalidateToken(): void {
+  cachedToken = null;
+}
 
 export interface ShopifyVariant {
   id: number;
@@ -49,7 +117,9 @@ export interface ShopifyCustomer {
 
 export function isShopifyConfigured(): boolean {
   return Boolean(
-    process.env.SHOPIFY_STORE_DOMAIN && process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
+    process.env.SHOPIFY_STORE_DOMAIN &&
+      (process.env.SHOPIFY_ADMIN_ACCESS_TOKEN ||
+        (process.env.SHOPIFY_CLIENT_ID && process.env.SHOPIFY_CLIENT_SECRET))
   );
 }
 
@@ -59,15 +129,24 @@ function baseUrl(): string {
   return `https://${domain}/admin/api/${version}`;
 }
 
-async function shopifyFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function shopifyFetch<T>(
+  path: string,
+  init?: RequestInit,
+  retried = false
+): Promise<T> {
+  const token = await getAccessToken();
   const res = await fetch(`${baseUrl()}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Access-Token": process.env.SHOPIFY_ADMIN_ACCESS_TOKEN!,
+      "X-Shopify-Access-Token": token,
       ...init?.headers,
     },
   });
+  if (res.status === 401 && !retried && !process.env.SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    invalidateToken();
+    return shopifyFetch<T>(path, init, true);
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Shopify API ${path} → HTTP ${res.status}: ${text.slice(0, 300)}`);
@@ -83,13 +162,20 @@ async function listAll<T>(path: string, resourceKey: string): Promise<T[]> {
   const out: T[] = [];
   let nextPath: string | null = `${path}${path.includes("?") ? "&" : "?"}limit=250`;
 
+  let retried = false;
   while (nextPath) {
     const url: string = nextPath.startsWith("http") ? nextPath : `${baseUrl()}${nextPath}`;
+    const token = await getAccessToken();
     const res: Response = await fetch(url, {
       headers: {
-        "X-Shopify-Access-Token": process.env.SHOPIFY_ADMIN_ACCESS_TOKEN!,
+        "X-Shopify-Access-Token": token,
       },
     });
+    if (res.status === 401 && !retried && !process.env.SHOPIFY_ADMIN_ACCESS_TOKEN) {
+      invalidateToken();
+      retried = true;
+      continue;
+    }
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Shopify API ${url} → HTTP ${res.status}: ${text.slice(0, 300)}`);
@@ -174,22 +260,30 @@ export async function createDraftOrder(
 
 /**
  * Verify Shopify's X-Shopify-Hmac-Sha256 header — base64 HMAC-SHA256 of the
- * raw request body signed with SHOPIFY_WEBHOOK_SECRET.
- * Returns null when the secret isn't configured (verification impossible),
- * matching the soft-mode convention used for Meta webhooks.
+ * raw request body. Webhooks registered under Settings → Notifications are
+ * signed with the key shown on that page; app-registered webhooks are signed
+ * with the app's client secret. Both are tried so either registration path
+ * verifies correctly.
+ * Returns null when no signing secret is configured (verification
+ * impossible), matching the soft-mode convention used for Meta webhooks.
  */
 export function verifyShopifyWebhook(
   rawBody: string,
   hmacHeader: string | null
 ): boolean | null {
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
-  if (!secret) return null;
+  const secrets = [
+    process.env.SHOPIFY_WEBHOOK_SECRET,
+    process.env.SHOPIFY_CLIENT_SECRET,
+  ].filter((s, i, arr): s is string => Boolean(s) && arr.indexOf(s) === i);
+  if (secrets.length === 0) return null;
   if (!hmacHeader) return false;
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(rawBody, "utf8")
-    .digest("base64");
-  const a = Buffer.from(expected);
   const b = Buffer.from(hmacHeader);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return secrets.some((secret) => {
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(rawBody, "utf8")
+      .digest("base64");
+    const a = Buffer.from(expected);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
 }

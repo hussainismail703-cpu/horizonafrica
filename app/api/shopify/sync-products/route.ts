@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   if (!isShopifyConfigured()) {
     return NextResponse.json(
-      { error: "Shopify is not configured (SHOPIFY_STORE_DOMAIN / SHOPIFY_ADMIN_ACCESS_TOKEN)" },
+      { error: "Shopify is not configured (SHOPIFY_STORE_DOMAIN + SHOPIFY_CLIENT_ID/SECRET)" },
       { status: 503 }
     );
   }
