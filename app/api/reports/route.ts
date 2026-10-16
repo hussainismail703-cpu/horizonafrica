@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     recentLeads,
     recentConversations,
     broadcastHistory,
+    allOrders,
   ] = await Promise.all([
     supabase
       .from("leads")
@@ -88,6 +89,10 @@ export async function GET(request: NextRequest) {
       .gte("created_at", startDateISO)
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("orders")
+      .select("order_track, status, total_cents")
+      .gte("created_at", startDateISO),
   ]);
 
   const totalLeads = allLeads.data?.length ?? 0;
@@ -215,6 +220,30 @@ export async function GET(request: NextRequest) {
     { type: "Handled by AI", count: Math.max(0, totalLeads - totalEscalated), color: "#002050" },
   ];
 
+  // Orders by track (scope freeze §6 — stock-on-hand and imported must be
+  // reported separately).
+  const trackAgg: Record<string, { total: number; paid: number; inProgress: number; handedToOrders: number; revenueCents: number }> = {};
+  for (const track of ["stock_on_hand", "imported"]) {
+    trackAgg[track] = { total: 0, paid: 0, inProgress: 0, handedToOrders: 0, revenueCents: 0 };
+  }
+  allOrders.data?.forEach((order) => {
+    const bucket = trackAgg[order.order_track];
+    if (!bucket) return;
+    bucket.total++;
+    if (order.status === "paid") {
+      bucket.paid++;
+      bucket.revenueCents += order.total_cents ?? 0;
+    } else if (order.status === "handed_to_orders") {
+      bucket.handedToOrders++;
+    } else if (order.status === "pending_payment" || order.status === "payment_failed") {
+      bucket.inProgress++;
+    }
+  });
+  const ordersByTrack = [
+    { track: "stock_on_hand" as const, label: "Stock on hand", ...trackAgg.stock_on_hand },
+    { track: "imported" as const, label: "Imported", ...trackAgg.imported },
+  ];
+
   return NextResponse.json({
     kpis: {
       totalLeads,
@@ -231,5 +260,6 @@ export async function GET(request: NextRequest) {
     broadcastPerformance,
     productInterests,
     escalationRate: escalationData,
+    ordersByTrack,
   });
 }

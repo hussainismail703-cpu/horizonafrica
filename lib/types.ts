@@ -38,6 +38,9 @@ export interface Lead {
   preferred_contact_number: string | null;
   needs_escalation: boolean | null;
   order_track: OrderTrack | null;
+  human_takeover: boolean;
+  human_takeover_at: string | null;
+  human_takeover_by: string | null;
   last_campaign_contact_date: string | null;
   last_campaign_response: string | null;
   rejection_reason: string | null;
@@ -368,12 +371,14 @@ export type OrderStatus =
   | "paid"
   | "payment_failed"
   | "cancelled"
-  | "expired";
+  | "expired"
+  | "handed_to_orders";
 
 export type DeliveryMethod = "delivery" | "collection";
 
 export interface OrderItem {
-  variant_id: number;
+  // null for imported-track items — they are not Shopify catalog variants
+  variant_id: number | null;
   product_title: string;
   variant_title: string | null;
   sku: string | null;

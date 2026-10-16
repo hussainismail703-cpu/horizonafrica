@@ -49,6 +49,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/follow-ups/cron" ||
     pathname === "/api/health" ||
     pathname === "/api/orders/create" || // n8n self-authenticates with APP_SECRET
+    pathname === "/api/orders/imported" || // n8n self-authenticates with APP_SECRET
+    pathname === "/api/handover" || // route self-auths (APP_SECRET or session)
     pathname.startsWith("/api/shopify/"); // routes self-auth (APP_SECRET bearer / HMAC)
 
   if (!user && !isAuthPage && !isPublicApi) {

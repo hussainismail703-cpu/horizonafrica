@@ -517,6 +517,119 @@ export async function markOrderPaid(
   return { matched: true, alreadyPaid: false, order: paidOrder };
 }
 
+export interface CreateImportedOrderInput {
+  phone: string;
+  item_description: string;
+  notes?: string | null;
+  customer?: {
+    name?: string | null;
+    email?: string | null;
+  };
+}
+
+export type CreateImportedOrderResult =
+  | { ok: true; order: Order }
+  | { ok: false; error: "invalid_phone" | "invalid_item" | "order_failed"; message: string };
+
+/**
+ * Imported/online order track (scope freeze §4.4): the customer wants an item
+ * that is ordered in rather than held in stock. Layla explains the 6-week
+ * lead time + 50% deposit terms, confirms intent, and n8n hands the enquiry
+ * to Orders@easternwearbykersh.co.za. No Shopify draft order or payment link
+ * is created — the order lands directly in 'handed_to_orders' for the team.
+ */
+export async function createImportedOrder(
+  supabase: SupabaseClient,
+  input: CreateImportedOrderInput
+): Promise<CreateImportedOrderResult> {
+  const phone = normalizePhone(input.phone);
+  if (!phone || phone.startsWith("0") || phone.length < 10 || phone.length > 15) {
+    return {
+      ok: false,
+      error: "invalid_phone",
+      message: "Phone must be a valid local or international number",
+    };
+  }
+
+  const description = (input.item_description ?? "").replace(/\x00/g, "").trim();
+  if (!description || description.length > 2000) {
+    return {
+      ok: false,
+      error: "invalid_item",
+      message: "item_description is required (max 2000 chars)",
+    };
+  }
+
+  const notes =
+    typeof input.notes === "string" && input.notes.trim()
+      ? input.notes.replace(/\x00/g, "").trim().slice(0, 4000)
+      : null;
+
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, full_name, email")
+    .eq("phone_number", phone)
+    .maybeSingle();
+
+  const customerName =
+    input.customer?.name?.trim() || lead?.full_name || null;
+  const customerEmail =
+    input.customer?.email?.trim() || lead?.email || null;
+
+  const { data: order, error: insertError } = await supabase
+    .from("orders")
+    .insert({
+      phone_number: phone,
+      lead_id: lead?.id ?? null,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      order_track: "imported",
+      items: [
+        {
+          variant_id: null,
+          product_title: description,
+          variant_title: null,
+          sku: null,
+          qty: 1,
+          price_cents: null,
+        },
+      ],
+      delivery_fee_cents: 0,
+      currency: "ZAR",
+      status: "handed_to_orders",
+    })
+    .select("*")
+    .single();
+
+  if (insertError || !order) {
+    return {
+      ok: false,
+      error: "order_failed",
+      message: insertError?.message ?? "Failed to persist order",
+    };
+  }
+
+  await supabase.from("order_events").insert({
+    order_id: order.id,
+    event: "handed_to_orders",
+    detail: {
+      item_description: description,
+      notes,
+      handover_target: "Orders@easternwearbykersh.co.za",
+      terms: "6-week lead time + 50% deposit",
+    },
+  });
+
+  if (lead?.id) {
+    await supabase
+      .from("leads")
+      .update({ order_track: "imported" })
+      .eq("id", lead.id);
+  }
+
+  return { ok: true, order: order as Order };
+}
+
 /** Expire unpaid links past ORDER_LINK_TTL_HOURS (default 24). */
 export async function expireStaleOrders(
   supabase: SupabaseClient
