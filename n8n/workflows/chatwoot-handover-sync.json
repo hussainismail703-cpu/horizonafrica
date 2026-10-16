@@ -1,0 +1,75 @@
+{
+  "id": "patLFfQOIDwaJDB5",
+  "name": "Chatwoot Handover Sync",
+  "description": "Syncs Chatwoot agent assignment/resolution to the lead human_takeover flag so Layla pauses while a human owns the conversation.",
+  "active": true,
+  "versionId": "43d02db5-f2ee-4347-8cec-ccab35fadeb5",
+  "webhookUrl": "https://n8n.horizonafrica.co.za/webhook/chatwoot-handover",
+  "nodes": [
+    {
+      "name": "Chatwoot Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatwoot-handover",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "name": "Parse Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || input;\n\nconst event = body.event || '';\nconst status = body.status || (body.conversation && body.conversation.status) || '';\nconst meta = body.meta || (body.conversation && body.conversation.meta) || {};\nconst sender = meta.sender || body.sender || body.contact || {};\nconst assignee = meta.assignee || body.assignee || null;\nconst inboxId = body.inbox_id || (body.conversation && body.conversation.inbox_id) || null;\nconst convId = body.id || (body.conversation && body.conversation.id) || null;\nconst changed = body.changed_attributes || (body.conversation && body.conversation.changed_attributes) || {};\n\nlet digits = String(sender.phone_number || '').replace(/[^0-9]/g, '');\nif (digits.startsWith('0') && digits.length === 10) digits = '27' + digits.slice(1);\n\n// Chatwoot only exposes these conversation-level events to webhook\n// subscriptions. assignee.changed is not subscribable in stock Chatwoot —\n// agent assignment arrives as conversation_updated with\n// changed_attributes.assignee_id (Rails dirty-tracking diff).\nconst RELEVANT = ['assignee_changed', 'conversation_updated', 'conversation_status_changed'];\n\nconst assigneeAttr = changed.assignee_id !== undefined ? changed.assignee_id : changed.assignee;\nlet assigneeBecame;\nif (assigneeAttr !== undefined) {\n  assigneeBecame = Array.isArray(assigneeAttr)\n    ? assigneeAttr[1]\n    : (assigneeAttr && typeof assigneeAttr === 'object' ? assigneeAttr.current_value : assigneeAttr);\n}\n\nlet takeOver = null;\nif (RELEVANT.includes(event)) {\n  if (status === 'resolved' || status === 'closed') {\n    takeOver = false;\n  } else if (event === 'assignee_changed' || event === 'conversation_status_changed') {\n    // Reopened: assigned -> human owns it again; unassigned -> Layla resumes.\n    takeOver = !!assignee;\n  } else {\n    // conversation_updated: only sync when the assignee actually changed,\n    // so unrelated updates (labels, snooze, custom attrs) never clear a\n    // manually-set takeover. Legacy payloads without a diff fall back to\n    // current assignee state.\n    const hasDiff = changed && Object.keys(changed).length > 0;\n    if (assigneeAttr !== undefined) takeOver = !!assigneeBecame;\n    else if (!hasDiff) takeOver = !!assignee;\n  }\n}\n\nif (takeOver === null || !digits) {\n  return [{ json: { action: 'ignore', event, status, inbox_id: inboxId, conversation_id: convId } }];\n}\n\nreturn [{ json: {\n  action: 'sync',\n  phone: digits,\n  take_over: takeOver,\n  by: 'chatwoot:' + event,\n  event,\n  status,\n  inbox_id: inboxId,\n  conversation_id: convId,\n}}];"
+      }
+    },
+    {
+      "name": "Should Sync?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.action }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "sync"
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "name": "Call Handover API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "parameters": {
+        "method": "POST",
+        "url": "https://dashboard.horizonafrica.co.za/api/handover",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer <APP_SECRET>" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, take_over: $json.take_over, by: $json.by }) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "Chatwoot Webhook": { "main": [[{ "node": "Parse Event", "type": "main", "index": 0 }]] },
+    "Parse Event": { "main": [[{ "node": "Should Sync?", "type": "main", "index": 0 }]] },
+    "Should Sync?": { "main": [[{ "node": "Call Handover API", "type": "main", "index": 0 }]] }
+  }
+}

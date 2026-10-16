@@ -8,6 +8,7 @@ const VALID_STATUSES: OrderStatus[] = [
   "payment_failed",
   "cancelled",
   "expired",
+  "handed_to_orders",
 ];
 const VALID_TRACKS: OrderTrack[] = ["stock_on_hand", "imported"];
 

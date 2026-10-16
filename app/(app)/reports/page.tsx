@@ -54,6 +54,15 @@ interface ReportsResponse {
   }[];
   productInterests: { name: string; count: number }[];
   escalationRate: { type: string; count: number; color: string }[];
+  ordersByTrack: {
+    track: "stock_on_hand" | "imported";
+    label: string;
+    total: number;
+    paid: number;
+    inProgress: number;
+    handedToOrders: number;
+    revenueCents: number;
+  }[];
 }
 
 export default function ReportsPage() {
@@ -68,6 +77,7 @@ export default function ReportsPage() {
     conversionRate: 0,
     escalationRate: 0,
   });
+  const [ordersByTrack, setOrdersByTrack] = useState<ReportsResponse["ordersByTrack"]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +97,7 @@ export default function ReportsPage() {
       }
       const json: ReportsResponse = await res.json();
       setKpis(json.kpis);
+      setOrdersByTrack(json.ordersByTrack ?? []);
       setData({
         leadsOverTime: json.leadsOverTime,
         scoreDistribution: json.scoreDistribution,
@@ -200,6 +211,44 @@ export default function ReportsPage() {
               iconColor="text-tertiary"
             />
           </div>
+
+          {/* Orders by track — stock-on-hand and imported are reported
+              separately per scope freeze §6 */}
+          {ordersByTrack.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {ordersByTrack.map((t) => (
+                <div
+                  key={t.track}
+                  className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-5"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-on-surface">{t.label} orders</h3>
+                    <span className="text-xs text-on-surface-variant">{t.total} total</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-on-surface">{t.paid}</p>
+                      <p className="text-[11px] text-on-surface-variant">Paid</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-on-surface">
+                        {t.track === "imported" ? t.handedToOrders : t.inProgress}
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant">
+                        {t.track === "imported" ? "With orders team" : "Awaiting payment"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-on-surface">
+                        R{(t.revenueCents / 100).toFixed(0)}
+                      </p>
+                      <p className="text-[11px] text-on-surface-variant">Revenue</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Charts */}
           <ReportsCharts data={data} />

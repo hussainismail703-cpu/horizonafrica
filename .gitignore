@@ -3,6 +3,7 @@ node_modules/
 
 # next.js
 .next/
+.next-proxy/
 out/
 
 # env files

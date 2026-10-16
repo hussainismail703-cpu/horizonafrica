@@ -17,6 +17,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   payment_failed: "Payment failed",
   cancelled: "Cancelled",
   expired: "Expired",
+  handed_to_orders: "With orders team",
 };
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
@@ -25,6 +26,7 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   payment_failed: "bg-error-container/40 text-on-error",
   cancelled: "bg-surface-container-high text-on-surface-variant",
   expired: "bg-surface-container-high text-on-surface-variant",
+  handed_to_orders: "bg-primary-container/40 text-on-primary-container",
 };
 
 function money(cents: number | null, currency = "ZAR") {

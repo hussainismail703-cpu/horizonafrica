@@ -3,11 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { detectAndMarkCampaignResponse, extractInboundMessage } from "@/lib/campaign-detection";
 import { classifyResponse } from "@/lib/classification";
 import { extractStatusUpdates, recordDeliveryFailures, recordDeliveryStatuses } from "@/lib/delivery-status";
+import { isHumanTakeover } from "@/lib/handover";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN ?? "horizon_africa_verify_2026";
-const N8N_WEBHOOK_URL = "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook";
-const N8N_ERROR_WEBHOOK_URL = "https://n8n.horizonafrica.co.za/webhook/webhook-proxy-error";
+const N8N_WEBHOOK_URL =
+  process.env.N8N_WEBHOOK_URL ?? "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook";
+const N8N_ERROR_WEBHOOK_URL =
+  process.env.N8N_ERROR_WEBHOOK_URL ??
+  "https://n8n.horizonafrica.co.za/webhook/webhook-proxy-error";
 
 async function sendErrorAlert(error: string) {
   try {
@@ -181,12 +185,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Human handover (§4.6): when a team member owns this conversation, flag
+    // it in the forwarded payload so the n8n workflow skips Layla's reply.
+    // The flag rides inside the Meta body as a top-level extension key — the
+    // workflow reads body._layla_context.human_takeover.
+    let forwardBody = body;
+    if (parsed && inbound) {
+      try {
+        const humanTakeover = await isHumanTakeover(inbound.phoneNumber);
+        parsed._layla_context = {
+          human_takeover: humanTakeover,
+          message_type: inbound.messageType,
+          meta_message_id: inbound.metaMessageId,
+        };
+        forwardBody = JSON.stringify(parsed);
+      } catch {
+        // Context lookup failed — forward the original body untouched
+      }
+    }
+
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": contentType,
       },
-      body,
+      body: forwardBody,
     });
 
     if (response.ok && inbound?.metaMessageId) {

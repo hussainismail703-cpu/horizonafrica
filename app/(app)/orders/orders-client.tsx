@@ -16,6 +16,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   payment_failed: "Payment failed",
   cancelled: "Cancelled",
   expired: "Expired",
+  handed_to_orders: "With orders team",
 };
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
@@ -24,6 +25,7 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   payment_failed: "bg-error-container/40 text-on-error",
   cancelled: "bg-surface-container-high text-on-surface-variant",
   expired: "bg-surface-container-high text-on-surface-variant",
+  handed_to_orders: "bg-primary-container/40 text-on-primary-container",
 };
 
 const TRACK_LABELS: Record<OrderTrack, string> = {
@@ -71,7 +73,7 @@ export function OrdersClient({ orders }: { orders: OrderWithLead[] }) {
         <div>
           <h1 className="text-2xl font-bold text-on-surface">Orders</h1>
           <p className="text-sm text-on-surface-variant">
-            WhatsApp stock-on-hand orders, payment links and Shopify payment status
+            WhatsApp stock-on-hand and imported orders, payment links and fulfilment status
           </p>
         </div>
         {pendingCount > 0 && (
