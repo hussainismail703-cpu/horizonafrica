@@ -78,10 +78,16 @@ npm run build   # must succeed with zero errors
 
 ```bash
 # .env.local + Vercel env — existing vars stay as-is, ADD:
-SHOPIFY_STORE_DOMAIN=easternwearbykersh.myshopify.com   # confirm exact myshopify domain
-SHOPIFY_ADMIN_ACCESS_TOKEN=shpat_...                   # from client's custom app / collaborator
-SHOPIFY_API_VERSION=2026-01                            # use latest stable at time of work
-SHOPIFY_WEBHOOK_SECRET=...                             # Shopify app API secret key (HMAC verify)
+SHOPIFY_STORE_DOMAIN=rvadvz-kk.myshopify.com           # permanent .myshopify domain
+SHOPIFY_CLIENT_ID=...                                # Dev Dashboard app Overview page
+SHOPIFY_CLIENT_SECRET=shpss_...                      # Dev Dashboard app Overview page
+SHOPIFY_API_VERSION=2026-10                          # latest stable at time of work
+SHOPIFY_WEBHOOK_SECRET=...                           # key that signs the webhooks: the
+                                                     # Notifications→Webhooks page key for
+                                                     # admin-registered hooks, or the client
+                                                     # secret for app-registered hooks
+# No SHOPIFY_ADMIN_ACCESS_TOKEN: this is a Dev Dashboard app — lib/shopify.ts
+# fetches a token via client_credentials grant and refreshes it (~24h expiry).
 ```
 
 ---
@@ -281,7 +287,10 @@ TESTING: npm run build must pass. I'll apply the migration in Supabase myself.
 ```
 Add a Shopify integration to this Next.js 15 + Supabase app. Store:
 easternwearbykersh.com (Shopify). Env: SHOPIFY_STORE_DOMAIN,
-SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_API_VERSION, SHOPIFY_WEBHOOK_SECRET.
+SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, SHOPIFY_API_VERSION,
+SHOPIFY_WEBHOOK_SECRET. The app is a Dev Dashboard app with no static
+token — fetch Admin API tokens via the client_credentials grant and
+refresh them (~24h expiry); retry once on 401.
 
 1. Migration supabase/migrations/202610XX_eastern_wear_m2.sql:
    - CREATE TABLE shopify_products (id uuid pk default gen_random_uuid(),
@@ -305,7 +314,9 @@ SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_API_VERSION, SHOPIFY_WEBHOOK_SECRET.
    - listCustomers() — paginated customers.json
    - getVariantInventory() — inventory_levels for availability checks
    - createDraftOrder(line_items, customer, note) → returns draft order + invoice_url
-   - verifyShopifyWebhook(rawBody, hmacHeader) — HMAC-SHA256 vs SHOPIFY_WEBHOOK_SECRET
+   - verifyShopifyWebhook(rawBody, hmacHeader) — HMAC-SHA256; tries
+     SHOPIFY_WEBHOOK_SECRET then SHOPIFY_CLIENT_SECRET so either
+     webhook-registration path verifies
 
 3. app/api/shopify/sync-products/route.ts (POST, APP_SECRET header):
    pull all products+variants → upsert into shopify_products/shopify_variants;

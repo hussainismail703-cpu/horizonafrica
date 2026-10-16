@@ -34,3 +34,4 @@ tests/screenshots/
 tests/test-results.json
 tests/*-results.json
 backups/
+repurpose/*.pages

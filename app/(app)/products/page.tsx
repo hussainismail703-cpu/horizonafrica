@@ -7,7 +7,8 @@ export default function ProductsPage() {
     <div className="space-y-6">
       <div>
         <p className="text-sm text-on-surface-variant">
-          Manage product catalog — prices, packages, and availability. Changes are reflected in Layla&apos;s responses in real-time.
+          Shopify catalog — sizes, prices, and live stock synced from easternwearbykersh.com.
+          Availability is checked in real-time before Layla confirms any order.
         </p>
       </div>
       <ProductManager />

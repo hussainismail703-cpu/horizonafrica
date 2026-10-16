@@ -306,3 +306,57 @@ export interface OptOutEntry {
   source_campaign_id: string | null;
   opted_out_at: string;
 }
+
+// ---- Shopify integration (Eastern Wear M2) ---------------------------------
+
+export interface ShopifyProductRow {
+  id: string;
+  shopify_product_id: number;
+  handle: string | null;
+  title: string;
+  category: string | null;
+  image_url: string | null;
+  description: string | null;
+  is_active: boolean;
+  last_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShopifyVariantRow {
+  id: string;
+  product_id: string;
+  shopify_variant_id: number;
+  title: string | null;
+  sku: string | null;
+  price_cents: number | null;
+  inventory_qty: number | null;
+  inventory_item_id: number | null;
+  available: boolean;
+  updated_at: string;
+}
+
+export interface ShopifyCustomerRow {
+  id: string;
+  shopify_customer_id: number;
+  phone: string | null;
+  email: string | null;
+  full_name: string | null;
+  orders_count: number;
+  total_spent_cents: number;
+  tags: string[];
+  synced_to_broadcast: boolean;
+  last_synced_at: string | null;
+  created_at: string;
+}
+
+export interface ShopifyWebhookEvent {
+  id: string;
+  topic: string;
+  shopify_id: string | null;
+  payload: Record<string, unknown>;
+  processed: boolean;
+  error: string | null;
+  received_at: string;
+  created_at: string;
+}
