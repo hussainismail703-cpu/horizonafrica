@@ -154,6 +154,26 @@ async function shopifyFetch<T>(
   return res.json() as Promise<T>;
 }
 
+interface ShopifyGraphqlResponse<T> {
+  data?: T;
+  errors?: { message: string }[];
+}
+
+async function shopifyGraphql<T>(
+  query: string,
+  variables: Record<string, unknown>
+): Promise<T> {
+  const body = await shopifyFetch<ShopifyGraphqlResponse<T>>("/graphql.json", {
+    method: "POST",
+    body: JSON.stringify({ query, variables }),
+  });
+  if (body.errors?.length) {
+    throw new Error(`Shopify GraphQL: ${body.errors.map((e) => e.message).join("; ")}`);
+  }
+  if (!body.data) throw new Error("Shopify GraphQL returned no data");
+  return body.data;
+}
+
 /**
  * Follow Shopify's Link-header pagination (page_info cursors) until exhausted.
  * `resourceKey` is the top-level array key in the response body.
@@ -226,6 +246,7 @@ export interface DraftOrderLineItem {
   title?: string;
   quantity: number;
   price?: string;
+  requires_shipping?: boolean;
 }
 
 export interface DraftOrderResult {
@@ -235,27 +256,146 @@ export interface DraftOrderResult {
   total_price: string;
 }
 
-/** Create a Shopify draft order and return it plus its invoice (payment) URL. */
+export interface DraftOrderOptions {
+  shippingAddress?: Record<string, string | null | undefined>;
+  shippingLine?: { title: string; price: number };
+  reserveInventoryUntil?: string;
+  customAttributes?: { key: string; value: string }[];
+  tags?: string[];
+}
+
+interface DraftOrderMutationResult {
+  draftOrderCreate: {
+    draftOrder: {
+      id: string;
+      legacyResourceId: string;
+      invoiceUrl: string | null;
+      name: string;
+      totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+    } | null;
+    userErrors: { field?: string[]; message: string }[];
+  };
+}
+
+interface DraftOrderQueryResult {
+  draftOrder: { invoiceUrl: string | null } | null;
+}
+
+/**
+ * Create a Shopify draft order and return its invoice (payment) URL.
+ *
+ * This uses GraphQL rather than the REST DraftOrder resource because only the
+ * GraphQL input supports `reserveInventoryUntil`. Holding the stock while the
+ * customer has a payment link prevents two Layla conversations from buying the
+ * same last unit.
+ */
 export async function createDraftOrder(
   lineItems: DraftOrderLineItem[],
   customer: { id?: number; phone?: string; email?: string },
-  note?: string
+  note?: string,
+  options: DraftOrderOptions = {}
 ): Promise<DraftOrderResult> {
-  const data = await shopifyFetch<{ draft_order: DraftOrderResult }>(
-    "/draft_orders.json",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        draft_order: {
-          line_items: lineItems,
-          customer,
-          note,
-          use_customer_default_address: true,
-        },
-      }),
-    }
+  const input: Record<string, unknown> = {
+    lineItems: lineItems.map((item) =>
+      item.variant_id
+        ? {
+            variantId: `gid://shopify/ProductVariant/${item.variant_id}`,
+            quantity: item.quantity,
+            requiresShipping: item.requires_shipping ?? true,
+            ...(item.price ? { originalUnitPrice: item.price } : {}),
+          }
+        : {
+            title: item.title ?? "Custom item",
+            quantity: item.quantity,
+            requiresShipping: item.requires_shipping ?? true,
+            ...(item.price ? { originalUnitPrice: item.price } : {}),
+          }
+    ),
+    note,
+    tags: options.tags ?? ["layla", "whatsapp"],
+    customAttributes: options.customAttributes ?? [],
+    ...(customer.email ? { email: customer.email } : {}),
+    ...(customer.phone ? { phone: customer.phone } : {}),
+    ...(options.shippingAddress ? { shippingAddress: options.shippingAddress } : {}),
+    ...(options.shippingLine ? { shippingLine: options.shippingLine } : {}),
+    ...(options.reserveInventoryUntil
+      ? { reserveInventoryUntil: options.reserveInventoryUntil }
+      : {}),
+  };
+
+  const created = await shopifyGraphql<DraftOrderMutationResult>(
+    `mutation draftOrderCreate($input: DraftOrderInput!) {
+      draftOrderCreate(input: $input) {
+        draftOrder {
+          id
+          legacyResourceId
+          invoiceUrl
+          name
+          totalPriceSet { shopMoney { amount currencyCode } }
+        }
+        userErrors { field message }
+      }
+    }`,
+    { input }
   );
-  return data.draft_order;
+
+  const mutation = created.draftOrderCreate;
+  if (mutation.userErrors.length) {
+    throw new Error(
+      `Shopify draft order failed: ${mutation.userErrors.map((e) => e.message).join("; ")}`
+    );
+  }
+  if (!mutation.draftOrder) {
+    throw new Error("Shopify draft order failed: no draft order returned");
+  }
+
+  const draftOrder = mutation.draftOrder;
+  const legacyDraftId = Number(draftOrder.legacyResourceId);
+  let invoiceUrl = draftOrder.invoiceUrl;
+
+  if (!invoiceUrl) {
+    // invoiceUrl is occasionally absent immediately after creation. Do NOT use
+    // draftOrderInvoiceSend here: Layla sends the link over WhatsApp, and that
+    // mutation would also email the customer.
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    try {
+      const queried = await shopifyGraphql<DraftOrderQueryResult>(
+        `query draftOrderInvoice($id: ID!) {
+          draftOrder(id: $id) { invoiceUrl }
+        }`,
+        { id: draftOrder.id }
+      );
+      invoiceUrl = queried.draftOrder?.invoiceUrl ?? null;
+    } catch (err) {
+      try {
+        await deleteDraftOrder(legacyDraftId);
+      } catch (cleanupError) {
+        console.error("[shopify] draft-order cleanup failed:", cleanupError);
+      }
+      throw err;
+    }
+  }
+
+  if (!invoiceUrl) {
+    try {
+      await deleteDraftOrder(legacyDraftId);
+    } catch (cleanupError) {
+      console.error("[shopify] draft-order cleanup failed:", cleanupError);
+    }
+    throw new Error("Shopify draft order was created but did not return a payment link");
+  }
+
+  return {
+    id: legacyDraftId,
+    invoice_url: invoiceUrl,
+    name: draftOrder.name,
+    total_price: draftOrder.totalPriceSet.shopMoney.amount,
+  };
+}
+
+/** Delete a draft order (used only when local persistence fails after creation). */
+export async function deleteDraftOrder(draftOrderId: number): Promise<void> {
+  await shopifyFetch(`/draft_orders/${draftOrderId}.json`, { method: "DELETE" });
 }
 
 /**

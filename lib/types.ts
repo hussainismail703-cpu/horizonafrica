@@ -360,3 +360,56 @@ export interface ShopifyWebhookEvent {
   received_at: string;
   created_at: string;
 }
+
+// ---- Orders (Eastern Wear M3) ----------------------------------------------
+
+export type OrderStatus =
+  | "pending_payment"
+  | "paid"
+  | "payment_failed"
+  | "cancelled"
+  | "expired";
+
+export type DeliveryMethod = "delivery" | "collection";
+
+export interface OrderItem {
+  variant_id: number;
+  product_title: string;
+  variant_title: string | null;
+  sku: string | null;
+  qty: number;
+  price_cents: number | null;
+}
+
+export interface Order {
+  id: string;
+  order_number: number;
+  phone_number: string;
+  lead_id: number | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  shopify_draft_order_id: number | null;
+  shopify_order_id: number | null;
+  shopify_order_number: string | null;
+  order_track: OrderTrack;
+  items: OrderItem[];
+  subtotal_cents: number | null;
+  delivery_fee_cents: number;
+  total_cents: number | null;
+  currency: string;
+  delivery_method: DeliveryMethod | null;
+  delivery_address: Record<string, unknown> | null;
+  payment_link: string | null;
+  status: OrderStatus;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderEvent {
+  id: string;
+  order_id: string;
+  event: string;
+  detail: Record<string, unknown> | null;
+  created_at: string;
+}
