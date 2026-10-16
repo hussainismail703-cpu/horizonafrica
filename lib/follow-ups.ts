@@ -67,7 +67,7 @@ export async function sendFollowUps(leadId?: number): Promise<FollowUpResult> {
     result.processed++;
     const phone = normalizePhone(lead.phone_number);
     const name = lead.full_name ?? "there";
-    const pkg = lead.offered_package ?? lead.product_interest ?? "fibre";
+    const pkg = lead.offered_package ?? lead.product_interest ?? "your item";
 
     const payload = {
       messaging_product: "whatsapp",

@@ -271,7 +271,7 @@ export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
             <tr className="border-b border-outline-variant bg-surface-container-low text-left text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               <th className="px-5 py-4">Name</th>
               <th className="px-5 py-4">Phone</th>
-              <th className="px-5 py-4">Package</th>
+              <th className="px-5 py-4">Item</th>
               <th className="px-5 py-4">Follow-Up Date</th>
               <th className="px-5 py-4">Status</th>
               <th className="px-5 py-4">Actions</th>

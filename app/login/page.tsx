@@ -51,7 +51,7 @@ export default function LoginPage() {
             <div className="relative mb-4 h-28 w-56">
               <Image
                 src={logo}
-                alt="Horizon Africa"
+                alt="Eastern Wear by Kersh"
                 fill
                 className="object-contain"
                 priority
@@ -171,7 +171,7 @@ export default function LoginPage() {
             <p className="text-[13px] text-on-surface-variant">
               Don&apos;t have an account?{" "}
               <a
-                href="mailto:admin@horizonafrica.co.za"
+                href="mailto:Orders@easternwearbykersh.co.za"
                 className="font-semibold text-secondary transition-colors hover:underline"
               >
                 Contact Administrator

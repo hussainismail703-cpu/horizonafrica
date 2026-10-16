@@ -318,7 +318,7 @@ export function TemplateManager() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. horizon_followup_v2"
+                placeholder="e.g. ew_followup_v2"
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/10"
               />
               <p className="mt-1 text-xs text-on-surface-variant">
@@ -370,7 +370,7 @@ export function TemplateManager() {
                 type="text"
                 value={headerText}
                 onChange={(e) => setHeaderText(e.target.value)}
-                placeholder="e.g. Welcome to Horizon Africa"
+                placeholder="e.g. Welcome to Eastern Wear"
                 maxLength={60}
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/10"
               />
@@ -392,7 +392,7 @@ export function TemplateManager() {
               <textarea
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
-                placeholder="Hi {{1}}, we saved the {{2}} package we discussed. Still thinking it over? Just reply here and we will pick up where we left off."
+                placeholder="Hi {{1}}, the {{2}} you liked is still available. Still thinking it over? Just reply here and we will pick up where we left off."
                 rows={4}
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/10"
               />
@@ -410,7 +410,7 @@ export function TemplateManager() {
                   type="text"
                   value={bodyExample}
                   onChange={(e) => setBodyExample(e.target.value)}
-                  placeholder="e.g. John, Premium Fiber"
+                  placeholder="e.g. Aisha, Midnight Abaya"
                   className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/10"
                 />
                 <p className="mt-1 text-xs text-on-surface-variant">
@@ -427,7 +427,7 @@ export function TemplateManager() {
                 type="text"
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                placeholder="e.g. — Horizon Africa"
+                placeholder="e.g. — Eastern Wear by Kersh"
                 maxLength={60}
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/10"
               />

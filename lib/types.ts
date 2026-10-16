@@ -4,6 +4,17 @@ export type LeadStatus = "new" | "contacted" | "qualified" | "converted" | "lost
 
 export type BroadcastStatus = "pending" | "sending" | "completed" | "failed";
 
+export type MessageCategory =
+  | "sales"
+  | "orders"
+  | "payments"
+  | "delivery"
+  | "general"
+  | "complaints"
+  | "uncertain";
+
+export type OrderTrack = "stock_on_hand" | "imported";
+
 export interface Lead {
   id: number;
   phone_number: string;
@@ -26,6 +37,7 @@ export interface Lead {
   offered_package: string | null;
   preferred_contact_number: string | null;
   needs_escalation: boolean | null;
+  order_track: OrderTrack | null;
   last_campaign_contact_date: string | null;
   last_campaign_response: string | null;
   rejection_reason: string | null;
@@ -42,6 +54,8 @@ export interface Conversation {
   lead_score: LeadScore;
   session_id: string | null;
   message_id: string | null;
+  message_category: MessageCategory | null;
+  order_track: OrderTrack | null;
   timestamp: string;
   created_at: string;
 }
@@ -140,13 +154,17 @@ export type Classification =
 
 export type RejectionReason =
   | "price"
-  | "already_has_service"
-  | "not_needed"
+  | "sizing_fit"
+  | "delivery_time"
+  | "style_design"
+  | "competitor"
   | "not_now"
   | "needs_more_info"
-  | "competitor"
-  | "not_eligible"
-  | "other";
+  | "not_needed"
+  | "other"
+  // legacy telecoms reasons — kept for existing rows
+  | "already_has_service"
+  | "not_eligible";
 
 export type ClassifiedBy = "ai" | "manual";
 

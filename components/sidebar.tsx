@@ -41,7 +41,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <div className="mb-6 flex items-center justify-between px-4">
           <Image
             src={logo}
-            alt="Horizon Africa"
+            alt="Eastern Wear by Kersh"
             className="h-20 w-auto object-contain"
             priority
           />

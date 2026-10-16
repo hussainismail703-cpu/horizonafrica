@@ -65,7 +65,7 @@ export function CreateCampaignForm({ groups }: CreateCampaignFormProps) {
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={200}
-          placeholder="e.g. Fibre Lead Re-Engagement"
+          placeholder="e.g. Eid Collection Re-Engagement"
           className="w-full rounded-lg border border-surface-variant bg-surface px-4 py-2.5 text-sm text-on-surface outline-none transition-colors focus:border-primary"
         />
       </div>

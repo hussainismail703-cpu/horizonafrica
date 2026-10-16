@@ -38,70 +38,78 @@ interface KeywordRule {
 }
 
 const KEYWORD_RULES: KeywordRule[] = [
-  // Specific objections FIRST — so a message like "Not interested, price is
-  // too high" captures the rejection_reason instead of matching the generic
+  // Specific objections FIRST — so a message like "Not interested, it's too
+  // expensive" captures the rejection_reason instead of matching the generic
   // "not interested" rule and losing the reason.
   {
-    patterns: /too expensive|too pricey|can'?t afford|out of my budget|costs too much|too much money|price is too high|too high|too costly/i,
+    patterns: /too expensive|too pricey|can'?t afford|out of my budget|costs too much|too much money|price is too high|too high|too costly|over my budget/i,
     classification: "not_interested",
     rejection_reason: "price",
   },
   {
-    patterns: /already have (fibre|telkom|internet|wifi)|already got fibre|i have (telkom|fibre) already/i,
-    classification: "already_has_service",
-    rejection_reason: "already_has_service",
+    patterns: /won'?t fit|doesn'?t fit|don'?t fit|no (size|stock)|size not available|out of stock|wrong size|size (issue|problem)|doesn'?t come in my size|not in my size|don'?t have my size|not available in my size/i,
+    classification: "not_interested",
+    rejection_reason: "sizing_fit",
   },
   {
-    patterns: /have (vodacom|mtn|cell c|websquad|rocketnet|octotel|openserve) fibre/i,
-    classification: "already_has_service",
+    patterns: /too long|takes too long|delivery (takes|time|too)|can'?t wait|6 weeks|six weeks|wait too long|shipping takes/i,
+    classification: "not_interested",
+    rejection_reason: "delivery_time",
+  },
+  {
+    patterns: /not my style|don'?t like the (style|design|pattern|colour|color)|not my taste|prefer (a )?different (style|design|colour|color)|don'?t like it|ugly/i,
+    classification: "not_interested",
+    rejection_reason: "style_design",
+  },
+  {
+    patterns: /already (bought|have|ordered|got|purchased)|bought (one|it|from)|got it (from|elsewhere)|ordered (one|it|from)|have one already|have (a|the|one) already|shopped at/i,
+    classification: "not_interested",
     rejection_reason: "competitor",
+  },
+  // Not now / need to think — soft decline
+  {
+    patterns: /maybe later|not now|need to think|think about it|ask my (husband|wife|partner)|another time|not this month/i,
+    classification: "not_interested",
+    rejection_reason: "not_now",
   },
   // Not interested — generic (after specific objections so reasons are captured)
   {
-    patterns: /not interested|don'?t need|no thanks|not now|no longer interested|not interested/i,
+    patterns: /not interested|don'?t need|no thanks|no longer interested|not for me|leave me alone|remove me/i,
     classification: "not_interested",
   },
   // Callback requested — wants to speak to a consultant at a later time
-  // (distinct from "interested/ready to proceed"). Per the campaign doc,
-  // "Please call me" is classified as interested, not callback.
+  // (distinct from "interested/ready to proceed").
   {
-    patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|i'?d like to speak|want to speak to a consultant|consultant to call/i,
+    patterns: /speak to a consultant|speak to someone|have someone call|call me back|callback|i'?d like to speak|want to speak to (a|someone)|consultant to call|call me please|someone (to )?call me/i,
     classification: "callback_requested",
   },
   {
     patterns: /^2\b/i, // numbered menu response "2 – I'd like to speak to a consultant"
     classification: "callback_requested",
   },
-  // Interested — explicit purchase intent / ready to proceed.
-  // "fibre" is included standalone because the telkom_reengagement template
-  // asks customers to reply "FIBRE" to signal interest.
-  {
-    patterns: /^(yes|interested|i want fibre|fibre|let'?s do it|sign me up|i'?m in)\b/i,
-    classification: "interested",
-  },
-  {
-    patterns: /i want to apply|how do i apply|send someone|i want the package|please contact me|contact me to apply|please call me|can someone contact me|someone contact me/i,
-    classification: "interested",
-  },
-  {
-    patterns: /^3\b/i, // numbered menu response "3 – I'm interested, please contact me"
-    classification: "interested",
-  },
   // Needs information — engagement, not sales-qualified.
-  // Checked BEFORE package-selection rules so that a question like
-  // "How much is the 50 Mbps package?" classifies as needs_information
-  // (asking about price) rather than interested (mentions a package).
+  // Checked BEFORE buy-intent rules so that a question like
+  // "How much is the black abaya?" classifies as needs_information
+  // (asking about price) rather than interested (mentions a garment).
   {
-    patterns: /how much|what'?s the price|what does it cost|pricing|tell me more|more info|more information|send details|what packages|what speeds|is fibre available|coverage/i,
+    patterns: /how much|what'?s the price|what does it cost|pricing|tell me more|more info|more information|send (me )?details|what sizes|what (colours|colors)|is it available|do you have|in stock|what'?s the material|what fabric|can i return|exchange|refund|how long/i,
     classification: "needs_information",
   },
   {
     patterns: /^1\b/i, // numbered menu response "1 – I'd like more information"
     classification: "needs_information",
   },
-  // Interested — package selection (explicit intent to take a specific package)
+  // Interested — explicit purchase intent / ready to proceed
   {
-    patterns: /i'?ll take|i want the|r425 package|50 mbps package|25 mbps package|40 mbps package|i want that package/i,
+    patterns: /^(yes|interested|let'?s do it|sign me up|i'?m in|yes please)\b/i,
+    classification: "interested",
+  },
+  {
+    patterns: /i want to (buy|order|purchase|get)|how do i (order|buy)|i'?ll take (it|the|one|this|that)|i want (the|that|this|it|one)|i want to apply|please contact me|contact me|please call me|can someone contact me|someone contact me|place an order|ready to order|proceed to (pay|checkout|order)/i,
+    classification: "interested",
+  },
+  {
+    patterns: /^3\b/i, // numbered menu response "3 – I'm interested, please contact me"
     classification: "interested",
   },
   // Not interested — numbered menu response "4"
@@ -132,31 +140,32 @@ function keywordClassify(text: string): ClassificationResult | null {
 // AI classification (OpenRouter)
 // ---------------------------------------------------------------------------
 
-const AI_PROMPT = `You are a WhatsApp response classifier for a Telkom Fibre sales campaign in South Africa.
+const AI_PROMPT = `You are a WhatsApp response classifier for an Eastern Wear by Kersh clothing sales campaign in South Africa. Eastern Wear sells women's eastern clothing (abayas, dresses, modest wear, scarves) via WhatsApp.
 
 Classify the customer's WhatsApp response into exactly one of these categories:
-- interested: Customer explicitly wants to proceed, apply, or wants a specific package
-- callback_requested: Customer wants to speak to a consultant or be called back (not yet ready to apply, but wants human contact)
+- interested: Customer explicitly wants to buy, order, or get a specific garment
+- callback_requested: Customer wants to speak to a consultant or be called back (not yet ready to buy, but wants human contact)
 - not_interested: Customer clearly declines or rejects the offer
-- already_has_service: Customer already has fibre/internet service
+- already_has_service: Customer already owns the item or bought it elsewhere
 - needs_information: Customer is asking a question or wants more details before deciding (engagement, not sales-qualified)
 - no_response: Empty or no meaningful content
 - other: Doesn't fit any category
 - uncertain: Ambiguous, can't determine intent
 
 Key distinction:
-- "How much is the 50 Mbps package?" → needs_information (engagement)
+- "How much is the black abaya?" → needs_information (engagement)
 - "I'd like to speak to a consultant" → callback_requested (wants human contact)
-- "I want the R425 package, please contact me" → interested (sales-qualified, ready to proceed)
+- "I want the dress in size 34, please contact me" → interested (sales-qualified, ready to buy)
 
-If the classification is "not_interested", also identify the rejection_reason (one of):
+If the classification is "not_interested" or "already_has_service", also identify the rejection_reason (one of):
 - price: Too expensive / budget concerns
-- already_has_service: Already has fibre/internet
-- not_needed: Doesn't need fibre
-- not_now: Not interested right now but maybe later
+- sizing_fit: Size/fit concerns — won't fit, size not available, out of stock in their size
+- delivery_time: Delivery takes too long / can't wait the lead time
+- style_design: Doesn't like the style, design, colour or pattern
+- competitor: Already bought it elsewhere / bought from a competitor
+- not_now: Not interested right now but maybe later (need to think, ask spouse)
 - needs_more_info: Needs more information before deciding
-- competitor: Using a competitor's service
-- not_eligible: Doesn't qualify (credit, area, etc.)
+- not_needed: Doesn't need the item
 - other: Other reason
 
 Return ONLY valid JSON in this exact format:
@@ -210,13 +219,16 @@ async function aiClassify(text: string): Promise<ClassificationResult | null> {
 
     const validReasons: RejectionReason[] = [
       "price",
-      "already_has_service",
-      "not_needed",
+      "sizing_fit",
+      "delivery_time",
+      "style_design",
+      "competitor",
       "not_now",
       "needs_more_info",
-      "competitor",
-      "not_eligible",
+      "not_needed",
       "other",
+      "already_has_service",
+      "not_eligible",
     ];
 
     const rejection_reason =
@@ -421,6 +433,12 @@ export async function classifyResponse(
       .maybeSingle();
 
     if (!existingQueue) {
+      const { data: campaign } = await supabase
+        .from("campaigns")
+        .select("name")
+        .eq("id", campaignId)
+        .single();
+
       const { error: queueErr } = await withRetry(() =>
         supabase.from("calling_queue").insert({
           campaign_id: campaignId,
@@ -431,7 +449,7 @@ export async function classifyResponse(
           email: leadData?.email ?? null,
           preferred_package: leadData?.preferred_package ?? null,
           customer_request: messageText,
-          campaign_source: "Fibre Lead Re-Engagement",
+          campaign_source: campaign?.name ?? null,
           campaign_stage: result.classification === "interested" ? "INTERESTED" : "CALLBACK REQUESTED",
           final_outcome: outcome?.final_outcome ?? null,
           queue_status: "pending",
