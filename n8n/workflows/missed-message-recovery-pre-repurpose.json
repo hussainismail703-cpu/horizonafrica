@@ -1,0 +1,664 @@
+{
+  "id": "PvCdg60gkRYVxYOf",
+  "name": "Horizon Africa - Missed Message Recovery",
+  "active": true,
+  "isArchived": false,
+  "versionId": "be41203f-38d2-4da4-825f-94d827a190eb",
+  "activeVersionId": "be41203f-38d2-4da4-825f-94d827a190eb",
+  "triggerCount": 1,
+  "createdAt": "2026-08-17T09:30:39.792Z",
+  "updatedAt": "2026-08-17T13:29:10.555Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Every 10 Min": {
+      "main": [
+        [
+          {
+            "node": "Fetch Unprocessed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Webhook Payload": {
+      "main": [
+        [
+          {
+            "node": "Re-submit to n8n",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Keep Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-submit to n8n": {
+      "main": [
+        [
+          {
+            "node": "Delete Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Webhook Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep Record ID": {
+      "main": [
+        [
+          {
+            "node": "Re-submit to n8n",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Placeholder": {
+      "main": [
+        [
+          {
+            "node": "Next Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Unprocessed": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "a6dff883-3b57-4f2a-a6b1-bde82893a4a8",
+      "name": "Every 10 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e3cde77e-efb8-4f40-865e-4ce8ae05176b",
+      "name": "Fetch Unprocessed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations",
+        "sendQuery": true,
+        "specifyQuery": "keypair",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ai_response",
+              "value": "is.null"
+            },
+            {
+              "name": "created_at",
+              "value": "=gte.{{ $now.minus(2, 'hours').toISO() }}"
+            },
+            {
+              "name": "created_at",
+              "value": "=lt.{{ $now.minus(5, 'minutes').toISO() }}"
+            },
+            {
+              "name": "order",
+              "value": "created_at.asc"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            },
+            {
+              "name": "select",
+              "value": "id,phone_number,contact_name,incoming_message,message_id,timestamp"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "becd8d31-8d9c-4035-9fb6-ec8742677677",
+      "name": "Build Webhook Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $json;\nconst payload = {\n  object: 'whatsapp_business_account',\n  entry: [{\n    id: '1613835747059073',\n    changes: [{\n      value: {\n        messaging_product: 'whatsapp',\n        metadata: {\n          display_phone_number: '27757774389',\n          phone_number_id: '1257101724147822'\n        },\n        contacts: [{\n          profile: { name: item.contact_name || 'Unknown' },\n          wa_id: item.phone_number\n        }],\n        messages: [{\n          from: item.phone_number,\n          id: item.message_id || ('recovery_' + item.id),\n          timestamp: Math.floor(new Date(item.timestamp).getTime() / 1000).toString(),\n          text: { body: item.incoming_message },\n          type: 'text'\n        }]\n      },\n      field: 'messages'\n    }]\n  }]\n};\nreturn { json: { payload: payload, recordId: item.id, phoneNumber: item.phone_number } };"
+      }
+    },
+    {
+      "id": "24d2f3ec-61d5-4ffc-b2ed-0e00798a8128",
+      "name": "Re-submit to n8n",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "f51e7fda-c03a-434b-b31d-fcdc0fc5d727",
+      "name": "Delete Placeholder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "DELETE",
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations",
+        "sendBody": false,
+        "sendQuery": true,
+        "specifyQuery": "keypair",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Keep Record ID').first().json.recordId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9f7b969f-feeb-4ad0-91a8-380706cd3ce5",
+      "name": "Next Batch",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "a21fb6a1-20c9-4033-bbd8-813bec4d061d",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "c4b3213a-bf36-4a1d-a285-bc9a993fe78c",
+      "name": "Keep Record ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "record-id",
+              "name": "recordId",
+              "value": "={{ $json.recordId }}",
+              "type": "number"
+            },
+            {
+              "id": "phone-number",
+              "name": "phoneNumber",
+              "value": "={{ $json.phoneNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "payload",
+              "name": "payload",
+              "value": "={{ $json.payload }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "mode": "manual"
+      }
+    }
+  ],
+  "nodeGroups": [],
+  "activeVersion": {
+    "nodes": [
+      {
+        "id": "a6dff883-3b57-4f2a-a6b1-bde82893a4a8",
+        "name": "Every 10 Min",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 10
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "e3cde77e-efb8-4f40-865e-4ce8ae05176b",
+        "name": "Fetch Unprocessed",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          224,
+          0
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations",
+          "sendQuery": true,
+          "specifyQuery": "keypair",
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "ai_response",
+                "value": "is.null"
+              },
+              {
+                "name": "created_at",
+                "value": "=gte.{{ $now.minus(2, 'hours').toISO() }}"
+              },
+              {
+                "name": "created_at",
+                "value": "=lt.{{ $now.minus(5, 'minutes').toISO() }}"
+              },
+              {
+                "name": "order",
+                "value": "created_at.asc"
+              },
+              {
+                "name": "limit",
+                "value": "10"
+              },
+              {
+                "name": "select",
+                "value": "id,phone_number,contact_name,incoming_message,message_id,timestamp"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "becd8d31-8d9c-4035-9fb6-ec8742677677",
+        "name": "Build Webhook Payload",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          0
+        ],
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const item = $json;\nconst payload = {\n  object: 'whatsapp_business_account',\n  entry: [{\n    id: '1613835747059073',\n    changes: [{\n      value: {\n        messaging_product: 'whatsapp',\n        metadata: {\n          display_phone_number: '27757774389',\n          phone_number_id: '1257101724147822'\n        },\n        contacts: [{\n          profile: { name: item.contact_name || 'Unknown' },\n          wa_id: item.phone_number\n        }],\n        messages: [{\n          from: item.phone_number,\n          id: item.message_id || ('recovery_' + item.id),\n          timestamp: Math.floor(new Date(item.timestamp).getTime() / 1000).toString(),\n          text: { body: item.incoming_message },\n          type: 'text'\n        }]\n      },\n      field: 'messages'\n    }]\n  }]\n};\nreturn { json: { payload: payload, recordId: item.id, phoneNumber: item.phone_number } };"
+        }
+      },
+      {
+        "id": "24d2f3ec-61d5-4ffc-b2ed-0e00798a8128",
+        "name": "Re-submit to n8n",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          896,
+          0
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json.payload) }}",
+          "options": {
+            "timeout": 30000
+          }
+        }
+      },
+      {
+        "id": "f51e7fda-c03a-434b-b31d-fcdc0fc5d727",
+        "name": "Delete Placeholder",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1120,
+          0
+        ],
+        "parameters": {
+          "method": "DELETE",
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations",
+          "sendBody": false,
+          "sendQuery": true,
+          "specifyQuery": "keypair",
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "id",
+                "value": "=eq.{{ $('Keep Record ID').first().json.recordId }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "9f7b969f-feeb-4ad0-91a8-380706cd3ce5",
+        "name": "Next Batch",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          1344,
+          0
+        ],
+        "parameters": {}
+      },
+      {
+        "id": "a21fb6a1-20c9-4033-bbd8-813bec4d061d",
+        "name": "Loop Over Items",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          448,
+          0
+        ],
+        "parameters": {
+          "batchSize": 1
+        }
+      },
+      {
+        "id": "c4b3213a-bf36-4a1d-a285-bc9a993fe78c",
+        "name": "Keep Record ID",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          896,
+          0
+        ],
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "record-id",
+                "name": "recordId",
+                "value": "={{ $json.recordId }}",
+                "type": "number"
+              },
+              {
+                "id": "phone-number",
+                "name": "phoneNumber",
+                "value": "={{ $json.phoneNumber }}",
+                "type": "string"
+              },
+              {
+                "id": "payload",
+                "name": "payload",
+                "value": "={{ $json.payload }}",
+                "type": "object"
+              }
+            ]
+          },
+          "includeOtherFields": false,
+          "mode": "manual"
+        }
+      }
+    ],
+    "connections": {
+      "Every 10 Min": {
+        "main": [
+          [
+            {
+              "node": "Fetch Unprocessed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Webhook Payload": {
+        "main": [
+          [
+            {
+              "node": "Re-submit to n8n",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Keep Record ID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Re-submit to n8n": {
+        "main": [
+          [
+            {
+              "node": "Delete Placeholder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Loop Over Items": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Build Webhook Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Keep Record ID": {
+        "main": [
+          [
+            {
+              "node": "Re-submit to n8n",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Delete Placeholder": {
+        "main": [
+          [
+            {
+              "node": "Next Batch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Unprocessed": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": []
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "parentFolderId": null,
+  "description": "Runs every 10 minutes. Checks Supabase for conversations with null ai_response (messages saved by Vercel proxy but not yet processed by n8n). Re-submits each missed message to the main Inbound AI workflow and deletes the placeholder record.",
+  "scopes": [
+    "execution:reveal",
+    "workflow:create",
+    "workflow:delete",
+    "workflow:disableRedaction",
+    "workflow:enableRedaction",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:export",
+    "workflow:import",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update"
+  ],
+  "canExecute": true
+}

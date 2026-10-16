@@ -1,0 +1,96 @@
+{
+  "id": "4sKjZjAY91UzCmqe",
+  "name": "Layla Error Alert",
+  "active": true,
+  "versionId": "07302c97-4c06-4d10-9862-8ce47a868b4b",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Email": {
+      "main": [
+        [
+          {
+            "node": "Send Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "ae730319-d1c8-4adf-998c-58aae348270c",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "36f753ca-1b18-4cea-bc8e-b557f1eec557",
+      "name": "Build Alert Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const error = $json;\nconst workflowName = error.workflow?.name || 'Unknown';\nconst workflowId = error.workflow?.id || 'Unknown';\nconst executionId = error.execution?.id || 'Unknown';\nconst errorMessage = error.execution?.error?.message || 'Unknown error';\nconst errorNode = error.execution?.lastNodeExecuted || 'Unknown';\nconst errorStack = error.execution?.error?.stack || '';\nconst errorTime = new Date().toISOString();\n\nconst htmlContent = `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">\n    <h1 style=\"color: white; margin: 0;\">\u26a0\ufe0f Workflow Error Alert</h1>\n    <p style=\"color: white; margin: 5px 0 0 0;\">Layla WhatsApp AI Assistant encountered an error</p>\n  </div>\n  <div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Error Details</h2>\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr><td style=\"padding: 8px; font-weight: bold; width: 180px;\">Workflow:</td><td style=\"padding: 8px;\">${workflowName} (ID: ${workflowId})</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Execution ID:</td><td style=\"padding: 8px;\">${executionId}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Failed Node:</td><td style=\"padding: 8px; color: #dc3545; font-weight: bold;\">${errorNode}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error Message:</td><td style=\"padding: 8px;\">${errorMessage}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Time:</td><td style=\"padding: 8px;\">${errorTime}</td></tr>\n    </table>\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Stack Trace</h2>\n    <pre style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; white-space: pre-wrap;\">${errorStack.substring(0, 2000)}</pre>\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Action Required</h2>\n    <ul style=\"padding-left: 20px;\">\n      <li style=\"padding: 5px 0;\">Check the n8n workflow: <a href=\"https://n8n.horizonafrica.co.za/workflow/${workflowId}\">Open in n8n</a></li>\n      <li style=\"padding: 5px 0;\">Review the execution details: <a href=\"https://n8n.horizonafrica.co.za/execution/${executionId}\">View execution</a></li>\n      <li style=\"padding: 5px 0;\">Fix the error and re-publish the workflow</li>\n    </ul>\n    <hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">\n    <p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was generated automatically by the n8n Error Trigger</p>\n  </div>\n</div>`;\n\nreturn { json: {\n  sender: { name: 'Horizon Africa AI', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Sif' }],\n  subject: '\u26a0\ufe0f Layla Error Alert: ' + workflowName + ' - ' + errorNode,\n  htmlContent: htmlContent\n} };"
+      }
+    },
+    {
+      "id": "8ed9ce5a-fce7-498a-bd49-1594af7fd340",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "REDACTED-BREVO-KEY-SEE-LIVE-WORKFLOW"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    }
+  ],
+  "description": "Automatically fires when any n8n workflow has an error. Sends an email alert to sifosman@gmail.com with error details."
+}

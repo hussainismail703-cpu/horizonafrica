@@ -7,7 +7,8 @@ const TABLES = [
   "campaign_enrolments", "campaign_interactions", "campaign_classifications",
   "campaign_audit_log", "campaign_errors", "calling_queue", "opt_out_list",
   "broadcast_groups", "broadcast_contacts", "broadcast_history",
-  "broadcast_recipients", "message_delivery_failures", "products",
+  "broadcast_recipients", "broadcast_messages", "message_delivery_failures",
+  "inbound_webhook_messages", "system_heartbeats", "products",
   "app_settings", "staff_alerts", "tenants", "users",
 ];
 
@@ -38,6 +39,6 @@ for (const table of TABLES) {
 
 fs.writeFileSync(
   path.join(dir, "..", "MANIFEST.md"),
-  `# Backup ${stamp}\n\nTaken before webhook-hardening changes.\nRollback tag: backup/pre-hardening-${stamp}\n\n## Row counts\n${manifest.join("\n")}\n`
+  `# Backup ${stamp}\n\n## Row counts\n${manifest.join("\n")}\n`
 );
 console.log(`\nDone → backups/${stamp}/db/`);

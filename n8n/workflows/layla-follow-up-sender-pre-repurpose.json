@@ -1,0 +1,842 @@
+{
+  "id": "Jz1na3ZFwZG1V0Vq",
+  "name": "Layla Follow-up Sender",
+  "active": true,
+  "isArchived": false,
+  "versionId": "66507e3d-5bd7-4455-a53a-f3523009d459",
+  "activeVersionId": "66507e3d-5bd7-4455-a53a-f3523009d459",
+  "triggerCount": 1,
+  "createdAt": "2026-08-14T21:04:31.790Z",
+  "updatedAt": "2026-09-15T11:44:19.154Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check Business Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Business Hours": {
+      "main": [
+        [
+          {
+            "node": "Fetch Due Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Due Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Batch Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Follow-up Message": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Follow-up Sent": {
+      "main": [
+        [
+          {
+            "node": "Batch Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Process": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare Follow-up Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Check Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Send Result": {
+      "main": [
+        [
+          {
+            "node": "Mark Follow-up Sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Template Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Template Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Template Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Template Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Batch Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "74bc0bd0-166b-4792-9849-8347f7cfbb66",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        80
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "d369bfb6-0ff6-4f1f-8f81-65ba0f87e72b",
+      "name": "Check Business Hours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// Follow-ups are automated template messages - send 24/7 (no business hours restriction)\n// Business hours only apply to human handover, not automated follow-ups\nconst now = new Date().toISOString();\nreturn [{ json: { now, isBusinessHours: true } }];"
+      }
+    },
+    {
+      "id": "3069a0d5-e1e0-4d6c-93c8-d1f7f32074b9",
+      "name": "Fetch Due Follow-ups",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        80
+      ],
+      "parameters": {
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/leads",
+        "method": "GET",
+        "sendQuery": true,
+        "sendHeaders": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,phone_number,full_name,offered_package,product_interest,follow_up_date"
+            },
+            {
+              "name": "follow_up_requested",
+              "value": "eq.true"
+            },
+            {
+              "name": "follow_up_sent",
+              "value": "eq.false"
+            },
+            {
+              "name": "follow_up_date",
+              "value": "=lte.{{ $json.now }}"
+            },
+            {
+              "name": "status",
+              "value": "not.in.(converted,lost)"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2e514ed9-90ae-4f31-97a2-5e7e9db8d341",
+      "name": "Prepare Follow-up Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Prepare WhatsApp template message for follow-up\nconst lead = $input.first().json;\nlet phone = lead.phone_number.replace(/[^0-9]/g, '');\nif (/^0\\d{9}$/.test(phone)) phone = '27' + phone.slice(1);\nconst name = lead.full_name || 'there';\n\n// horizon_followup_v6 body: \"Hi {{1}}, we saved the {{2}} package we discussed...\"\n// {{2}} must be the package name \u2014 offered_package, falling back to product_interest\nconst pkg = lead.offered_package || lead.product_interest || 'fibre';\n\nreturn {\n  json: {\n    leadId: lead.id,\n    phone: phone,\n    templateName: 'horizon_followup_v6',\n    name: name,\n    pkg: pkg\n  }\n};"
+      }
+    },
+    {
+      "id": "0ca2d2f0-6e3a-4fb9-83d9-108909af2818",
+      "name": "Send WhatsApp Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "url": "https://graph.facebook.com/v21.0/1257101724147822/messages",
+        "method": "POST",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "specifyHeaders": "keypair",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: $json.phone, type: \"template\", template: { name: $json.templateName, language: { code: \"en_US\" }, components: [ { type: \"body\", parameters: [ { type: \"text\", text: $json.name }, { type: \"text\", text: $json.pkg } ] } ] } }) }}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-META-TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "04ad9a70-bedb-4c17-a4b6-01f9f733ac1e",
+      "name": "Mark Follow-up Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        80
+      ],
+      "parameters": {
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/leads",
+        "method": "PATCH",
+        "sendBody": true,
+        "sendHeaders": true,
+        "sendQuery": true,
+        "specifyBody": "json",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "=eq.{{ $('Prepare Follow-up Message').first().json.leadId }}"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ follow_up_sent: true, follow_up_sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }) }}",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9bb915d4-24ef-4147-8b3a-6fb8ffcc0089",
+      "name": "Batch Process",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        80
+      ],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "7aaba1e9-fc64-44d7-afb0-3fbeb5b2aced",
+      "name": "Check Send Result",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.messages !== undefined }}",
+              "value2": true
+            }
+          ],
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-messages",
+              "leftValue": "={{ $json.messages !== undefined }}",
+              "operator": {
+                "operation": "true",
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "94d174e4-f0dd-4f78-826e-66531ba6c298",
+      "name": "Build Template Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const sendResult = $input.first().json;\nconst prepData = $('Prepare Follow-up Message').first().json;\nconst errorTime = new Date().toISOString();\n\n// Extract error details from Meta API response\nlet errorMessage = 'Unknown error';\nlet errorCode = '';\nif (sendResult.error) {\n  errorMessage = sendResult.error.message || JSON.stringify(sendResult.error);\n  errorCode = sendResult.error.code || '';\n} else if (sendResult.message && sendResult.httpCode) {\n  errorMessage = sendResult.message;\n  errorCode = sendResult.httpCode;\n}\n\nconst leadName = prepData.name || 'Unknown';\nconst leadPhone = prepData.phone || 'Unknown';\nconst templateName = prepData.templateName || 'horizon_followup_v6';\n\nconst htmlContent = `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">\n    <h1 style=\"color: white; margin: 0;\">\u26a0\ufe0f WhatsApp Template Send Failed</h1>\n    <p style=\"color: white; margin: 5px 0 0 0;\">Follow-up reminder could not be delivered</p>\n  </div>\n  <div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Error Details</h2>\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr><td style=\"padding: 8px; font-weight: bold; width: 180px;\">Workflow:</td><td style=\"padding: 8px;\">Layla Follow-up Sender</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Template:</td><td style=\"padding: 8px;\">${templateName}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Lead Name:</td><td style=\"padding: 8px;\">${leadName}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Lead Phone:</td><td style=\"padding: 8px;\">${leadPhone}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error Code:</td><td style=\"padding: 8px; color: #dc3545; font-weight: bold;\">${errorCode}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error Message:</td><td style=\"padding: 8px;\">${errorMessage}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Time:</td><td style=\"padding: 8px;\">${errorTime}</td></tr>\n    </table>\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Action Required</h2>\n    <ul style=\"padding-left: 20px;\">\n      <li style=\"padding: 5px 0;\">Check the template configuration in Meta Business Manager</li>\n      <li style=\"padding: 5px 0;\">Verify template parameters match the expected count</li>\n      <li style=\"padding: 5px 0;\">Check the n8n workflow: <a href=\"https://n8n.horizonafrica.co.za/workflow/Jz1na3ZFwZG1V0Vq\">Open in n8n</a></li>\n      <li style=\"padding: 5px 0;\">The lead has NOT been marked as sent and will be retried on the next run</li>\n    </ul>\n    <hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">\n    <p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was generated by the Layla Follow-up Sender workflow</p>\n  </div>\n</div>`;\n\nreturn { json: {\n  sender: { name: 'Horizon Africa AI', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Sif' }],\n  subject: '\u26a0\ufe0f WhatsApp Template Send Failed: ' + templateName + ' to ' + leadName,\n  htmlContent: htmlContent\n} };"
+      }
+    },
+    {
+      "id": "6d7951c5-152f-42d7-a692-9c2e14485f3a",
+      "name": "Send Template Error Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1568,
+        400
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "REDACTED-BREVO-KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+        "method": "POST",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "specifyHeaders": "keypair",
+        "url": "https://api.brevo.com/v3/smtp/email"
+      }
+    }
+  ],
+  "nodeGroups": [],
+  "activeVersion": {
+    "nodes": [
+      {
+        "id": "74bc0bd0-166b-4792-9849-8347f7cfbb66",
+        "name": "Every 15 Minutes",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          80
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 15
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "d369bfb6-0ff6-4f1f-8f81-65ba0f87e72b",
+        "name": "Check Business Hours",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          80
+        ],
+        "parameters": {
+          "jsCode": "// Follow-ups are automated template messages - send 24/7 (no business hours restriction)\n// Business hours only apply to human handover, not automated follow-ups\nconst now = new Date().toISOString();\nreturn [{ json: { now, isBusinessHours: true } }];"
+        }
+      },
+      {
+        "id": "3069a0d5-e1e0-4d6c-93c8-d1f7f32074b9",
+        "name": "Fetch Due Follow-ups",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          448,
+          80
+        ],
+        "parameters": {
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/leads",
+          "method": "GET",
+          "sendQuery": true,
+          "sendHeaders": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "select",
+                "value": "id,phone_number,full_name,offered_package,product_interest,follow_up_date"
+              },
+              {
+                "name": "follow_up_requested",
+                "value": "eq.true"
+              },
+              {
+                "name": "follow_up_sent",
+                "value": "eq.false"
+              },
+              {
+                "name": "follow_up_date",
+                "value": "=lte.{{ $json.now }}"
+              },
+              {
+                "name": "status",
+                "value": "not.in.(converted,lost)"
+              }
+            ]
+          },
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "2e514ed9-90ae-4f31-97a2-5e7e9db8d341",
+        "name": "Prepare Follow-up Message",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          0
+        ],
+        "parameters": {
+          "jsCode": "// Prepare WhatsApp template message for follow-up\nconst lead = $input.first().json;\nlet phone = lead.phone_number.replace(/[^0-9]/g, '');\nif (/^0\\d{9}$/.test(phone)) phone = '27' + phone.slice(1);\nconst name = lead.full_name || 'there';\n\n// horizon_followup_v6 body: \"Hi {{1}}, we saved the {{2}} package we discussed...\"\n// {{2}} must be the package name \u2014 offered_package, falling back to product_interest\nconst pkg = lead.offered_package || lead.product_interest || 'fibre';\n\nreturn {\n  json: {\n    leadId: lead.id,\n    phone: phone,\n    templateName: 'horizon_followup_v6',\n    name: name,\n    pkg: pkg\n  }\n};"
+        }
+      },
+      {
+        "id": "0ca2d2f0-6e3a-4fb9-83d9-108909af2818",
+        "name": "Send WhatsApp Follow-up",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1120,
+          0
+        ],
+        "parameters": {
+          "url": "https://graph.facebook.com/v21.0/1257101724147822/messages",
+          "method": "POST",
+          "sendBody": true,
+          "sendHeaders": true,
+          "specifyBody": "json",
+          "specifyHeaders": "keypair",
+          "jsonBody": "={{ JSON.stringify({ messaging_product: \"whatsapp\", recipient_type: \"individual\", to: $json.phone, type: \"template\", template: { name: $json.templateName, language: { code: \"en_US\" }, components: [ { type: \"body\", parameters: [ { type: \"text\", text: $json.name }, { type: \"text\", text: $json.pkg } ] } ] } }) }}",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-META-TOKEN"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "maxTries": 2,
+        "waitBetweenTries": 5000
+      },
+      {
+        "id": "04ad9a70-bedb-4c17-a4b6-01f9f733ac1e",
+        "name": "Mark Follow-up Sent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1344,
+          80
+        ],
+        "parameters": {
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/leads",
+          "method": "PATCH",
+          "sendBody": true,
+          "sendHeaders": true,
+          "sendQuery": true,
+          "specifyBody": "json",
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "id",
+                "value": "=eq.{{ $('Prepare Follow-up Message').first().json.leadId }}"
+              }
+            ]
+          },
+          "jsonBody": "={{ JSON.stringify({ follow_up_sent: true, follow_up_sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }) }}",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "return=minimal"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "9bb915d4-24ef-4147-8b3a-6fb8ffcc0089",
+        "name": "Batch Process",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          672,
+          80
+        ],
+        "parameters": {
+          "batchSize": 1
+        }
+      },
+      {
+        "id": "7aaba1e9-fc64-44d7-afb0-3fbeb5b2aced",
+        "name": "Check Send Result",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1120,
+          200
+        ],
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{ $json.messages !== undefined }}",
+                "value2": true
+              }
+            ],
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "check-messages",
+                "leftValue": "={{ $json.messages !== undefined }}",
+                "operator": {
+                  "operation": "true",
+                  "type": "boolean"
+                },
+                "rightValue": true
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            }
+          }
+        }
+      },
+      {
+        "id": "94d174e4-f0dd-4f78-826e-66531ba6c298",
+        "name": "Build Template Error Alert",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          400
+        ],
+        "parameters": {
+          "jsCode": "const sendResult = $input.first().json;\nconst prepData = $('Prepare Follow-up Message').first().json;\nconst errorTime = new Date().toISOString();\n\n// Extract error details from Meta API response\nlet errorMessage = 'Unknown error';\nlet errorCode = '';\nif (sendResult.error) {\n  errorMessage = sendResult.error.message || JSON.stringify(sendResult.error);\n  errorCode = sendResult.error.code || '';\n} else if (sendResult.message && sendResult.httpCode) {\n  errorMessage = sendResult.message;\n  errorCode = sendResult.httpCode;\n}\n\nconst leadName = prepData.name || 'Unknown';\nconst leadPhone = prepData.phone || 'Unknown';\nconst templateName = prepData.templateName || 'horizon_followup_v6';\n\nconst htmlContent = `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">\n    <h1 style=\"color: white; margin: 0;\">\u26a0\ufe0f WhatsApp Template Send Failed</h1>\n    <p style=\"color: white; margin: 5px 0 0 0;\">Follow-up reminder could not be delivered</p>\n  </div>\n  <div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Error Details</h2>\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr><td style=\"padding: 8px; font-weight: bold; width: 180px;\">Workflow:</td><td style=\"padding: 8px;\">Layla Follow-up Sender</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Template:</td><td style=\"padding: 8px;\">${templateName}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Lead Name:</td><td style=\"padding: 8px;\">${leadName}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Lead Phone:</td><td style=\"padding: 8px;\">${leadPhone}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error Code:</td><td style=\"padding: 8px; color: #dc3545; font-weight: bold;\">${errorCode}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error Message:</td><td style=\"padding: 8px;\">${errorMessage}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Time:</td><td style=\"padding: 8px;\">${errorTime}</td></tr>\n    </table>\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Action Required</h2>\n    <ul style=\"padding-left: 20px;\">\n      <li style=\"padding: 5px 0;\">Check the template configuration in Meta Business Manager</li>\n      <li style=\"padding: 5px 0;\">Verify template parameters match the expected count</li>\n      <li style=\"padding: 5px 0;\">Check the n8n workflow: <a href=\"https://n8n.horizonafrica.co.za/workflow/Jz1na3ZFwZG1V0Vq\">Open in n8n</a></li>\n      <li style=\"padding: 5px 0;\">The lead has NOT been marked as sent and will be retried on the next run</li>\n    </ul>\n    <hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">\n    <p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was generated by the Layla Follow-up Sender workflow</p>\n  </div>\n</div>`;\n\nreturn { json: {\n  sender: { name: 'Horizon Africa AI', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Sif' }],\n  subject: '\u26a0\ufe0f WhatsApp Template Send Failed: ' + templateName + ' to ' + leadName,\n  htmlContent: htmlContent\n} };"
+        }
+      },
+      {
+        "id": "6d7951c5-152f-42d7-a692-9c2e14485f3a",
+        "name": "Send Template Error Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1568,
+          400
+        ],
+        "parameters": {
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api-key",
+                "value": "REDACTED-BREVO-KEY"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+          "method": "POST",
+          "options": {
+            "timeout": 10000
+          },
+          "sendBody": true,
+          "sendHeaders": true,
+          "specifyBody": "json",
+          "specifyHeaders": "keypair",
+          "url": "https://api.brevo.com/v3/smtp/email"
+        }
+      }
+    ],
+    "connections": {
+      "Every 15 Minutes": {
+        "main": [
+          [
+            {
+              "node": "Check Business Hours",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Business Hours": {
+        "main": [
+          [
+            {
+              "node": "Fetch Due Follow-ups",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Due Follow-ups": {
+        "main": [
+          [
+            {
+              "node": "Batch Process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Follow-up Message": {
+        "main": [
+          [
+            {
+              "node": "Send WhatsApp Follow-up",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Mark Follow-up Sent": {
+        "main": [
+          [
+            {
+              "node": "Batch Process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Batch Process": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Prepare Follow-up Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send WhatsApp Follow-up": {
+        "main": [
+          [
+            {
+              "node": "Check Send Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Send Result": {
+        "main": [
+          [
+            {
+              "node": "Mark Follow-up Sent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Build Template Error Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Template Error Alert": {
+        "main": [
+          [
+            {
+              "node": "Send Template Error Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Template Error Alert": {
+        "main": [
+          [
+            {
+              "node": "Batch Process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": []
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "parentFolderId": null,
+  "description": "Scheduled workflow that runs every 15 minutes during business hours (Mon-Fri 08:00-17:00 SAST). Fetches leads with due follow-ups from Supabase and sends WhatsApp template messages (horizon_followup_v6) to customers who requested timed follow-ups. Marks e",
+  "scopes": [
+    "execution:reveal",
+    "workflow:create",
+    "workflow:delete",
+    "workflow:disableRedaction",
+    "workflow:enableRedaction",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:export",
+    "workflow:import",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update"
+  ],
+  "canExecute": true
+}

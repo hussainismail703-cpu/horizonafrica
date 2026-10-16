@@ -1,0 +1,688 @@
+{
+  "id": "ytA7xBbvP6ubsY12",
+  "name": "WhatsApp Webhook Health Monitor",
+  "active": true,
+  "isArchived": false,
+  "versionId": "49056295-eef8-443c-a193-3a2958a0fff8",
+  "activeVersionId": "49056295-eef8-443c-a193-3a2958a0fff8",
+  "triggerCount": 1,
+  "createdAt": "2026-08-07T09:44:18.803Z",
+  "updatedAt": "2026-09-21T14:32:02.411Z",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check Last Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Last Message": {
+      "main": [
+        [
+          {
+            "node": "Check Meta Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Meta Status": {
+      "main": [
+        [
+          {
+            "node": "Check Phone Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Health": {
+      "main": [
+        [
+          {
+            "node": "Is Healthy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Healthy?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Email": {
+      "main": [
+        [
+          {
+            "node": "Send Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Phone Status": {
+      "main": [
+        [
+          {
+            "node": "Check Scheduler Heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Scheduler Heartbeat": {
+      "main": [
+        [
+          {
+            "node": "Analyze Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "7cfd0a32-0326-4236-b51e-2134e1b254d8",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "60a5d1be-9ddd-4ddc-9f52-4d8f302dc4f2",
+      "name": "Check Last Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations?order=timestamp.desc&limit=1&select=timestamp,phone_number,incoming_message",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "796d5403-31b4-4b9f-8fa9-32ecb8aea555",
+      "name": "Check Meta Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v21.0/1613835747059073/subscribed_apps",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-META-TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "38baf95d-100a-4a31-b349-db1c3cbd8af7",
+      "name": "Check Phone Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v21.0/1257101724147822?fields=status,code_verification_status,quality_rating,webhook_configuration",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-META-TOKEN"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "42b5399f-43db-42a6-a7c3-45e5625f3ee8",
+      "name": "Analyze Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const lastMsg = $('Check Last Message').first().json;\nconst metaSub = $('Check Meta Status').first().json;\nconst phoneStatus = $('Check Phone Status').first().json;\n\nconst now = new Date();\nconst issues = [];\nlet lastMessageTime = null;\nlet minutesSinceLastMessage = null;\n\n// Fix: lastMsg is a flat object from Supabase REST API, not an array\nif (lastMsg && lastMsg.timestamp) {\n  lastMessageTime = new Date(lastMsg.timestamp);\n  minutesSinceLastMessage = Math.round((now - lastMessageTime) / 60000);\n  // Only alert if no messages in 48 hours \u2014 appropriate for low-traffic WhatsApp bot\n  if (minutesSinceLastMessage > 2880) {\n    issues.push('NO_MESSAGES: No WhatsApp messages received in ' + minutesSinceLastMessage + ' minutes (last: ' + lastMessageTime.toISOString() + ')');\n  }\n} else if (!lastMsg || Object.keys(lastMsg).length === 0) {\n  issues.push('NO_HISTORY: No conversation history found in Supabase - webhook may never have received a message');\n}\n\nconst subData = metaSub?.data || [];\nif (subData.length === 0) {\n  issues.push('NOT_SUBSCRIBED: Meta app is NOT subscribed to WABA - webhooks will not be delivered');\n}\n\nif (phoneStatus?.status !== 'CONNECTED') {\n  issues.push('PHONE_DOWN: Phone number status is ' + (phoneStatus?.status || 'UNKNOWN') + ' (expected: CONNECTED)');\n}\n\nif (!phoneStatus?.webhook_configuration?.application) {\n  issues.push('NO_WEBHOOK_URL: No webhook callback URL configured on phone number');\n}\n\n// --- Campaign scheduler heartbeat ---\n// /api/campaigns/process stamps system_heartbeats every run (every 15 min).\n// A stale or missing row means the scheduler silently died.\nlet heartbeatRow = null;\ntry {\n  const hb = $('Check Scheduler Heartbeat').first().json;\n  heartbeatRow = Array.isArray(hb) ? hb[0] : hb;\n} catch (e) {}\nlet schedulerAgeMinutes = null;\nif (!heartbeatRow || !heartbeatRow.last_run_at) {\n  issues.push('SCHEDULER_NO_HEARTBEAT: No campaign_process heartbeat found - scheduler may never have run or the check failed');\n} else {\n  schedulerAgeMinutes = Math.round((now - new Date(heartbeatRow.last_run_at)) / 60000);\n  if (schedulerAgeMinutes > 45) {\n    issues.push('SCHEDULER_STALE: Campaign process last ran ' + schedulerAgeMinutes + ' minutes ago (expected every 15) - n8n scheduler workflow may be down');\n  }\n}\n\nconst isHealthy = issues.length === 0;\n\n// Deduplication: normalize the alert key by stripping dynamic numbers\n// This prevents the same issue from re-triggering every 30 min just because the minute count changed\nconst staticData = $getWorkflowStaticData('global');\nconst issuesKey = issues.map(function(i) { return i.split(':')[0]; }).sort().join('|');\nconst lastAlertKey = staticData.lastAlertKey || '';\nconst lastAlertTime = staticData.lastAlertTime ? new Date(staticData.lastAlertTime) : null;\nconst COOLDOWN_MINUTES = 1440; // Don't re-send the same alert type within 24 hours\n\nlet shouldSendAlert = !isHealthy;\nif (shouldSendAlert && issuesKey === lastAlertKey && lastAlertTime) {\n  const minutesSinceLastAlert = Math.round((now - lastAlertTime) / 60000);\n  if (minutesSinceLastAlert < COOLDOWN_MINUTES) {\n    shouldSendAlert = false;\n  }\n}\n\n// Update static data when sending an alert\nif (shouldSendAlert) {\n  staticData.lastAlertKey = issuesKey;\n  staticData.lastAlertTime = now.toISOString();\n}\n\n// If healthy, reset the alert key so a new issue will trigger immediately\nif (isHealthy) {\n  staticData.lastAlertKey = '';\n}\n\nreturn {\n  json: {\n    isHealthy,\n    shouldSendAlert,\n    issues: issues,\n    issuesCount: issues.length,\n    lastMessageTime: lastMessageTime ? lastMessageTime.toISOString() : null,\n    minutesSinceLastMessage,\n    metaSubscribed: subData.length > 0,\n    phoneStatus: phoneStatus?.status || 'UNKNOWN',\n    codeVerificationStatus: phoneStatus?.code_verification_status || 'UNKNOWN',\n    qualityRating: phoneStatus?.quality_rating || 'UNKNOWN',\n    webhookUrl: phoneStatus?.webhook_configuration?.application || 'NOT SET',\n    schedulerLastRunAt: heartbeatRow?.last_run_at || null,\n    schedulerAgeMinutes,\n    timestamp: now.toISOString()\n  }\n};\n",
+        "mode": "runOnceForAllItems"
+      }
+    },
+    {
+      "id": "f1362cc2-f282-44d4-98c1-a3f1f8fed2b0",
+      "name": "Is Healthy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldSendAlert }}",
+              "operator": {
+                "operation": "equals",
+                "type": "boolean"
+              },
+              "rightValue": false
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "2fe235cc-ca23-4c15-aa4e-751f2f946f80",
+      "name": "Build Alert Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const health = $json;\nconst issues = health.issues || [];\nconst issuesList = issues.map(function(i) { return '<li style=\"padding: 5px 0; color: #dc3545;\">' + i + '</li>'; }).join('');\n\nvar htmlContent = '<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">';\nhtmlContent += '<div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">';\nhtmlContent += '<h1 style=\"color: white; margin: 0;\">WhatsApp Webhook Health Alert</h1>';\nhtmlContent += '<p style=\"color: white; margin: 5px 0 0 0;\">Meta webhook delivery may be interrupted</p>';\nhtmlContent += '</div>';\nhtmlContent += '<div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Issues Detected</h2>';\nhtmlContent += '<ul style=\"padding-left: 20px;\">' + issuesList + '</ul>';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">System Status</h2>';\nhtmlContent += '<table style=\"width: 100%; border-collapse: collapse;\">';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Last Message Received:</td><td style=\"padding: 8px;\">' + (health.lastMessageTime || 'Never') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Minutes Since Last:</td><td style=\"padding: 8px;\">' + (health.minutesSinceLastMessage || 'N/A') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Meta App Subscribed:</td><td style=\"padding: 8px;\">' + (health.metaSubscribed ? 'Yes' : 'NO') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Phone Status:</td><td style=\"padding: 8px;\">' + health.phoneStatus + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Code Verification:</td><td style=\"padding: 8px;\">' + health.codeVerificationStatus + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Quality Rating:</td><td style=\"padding: 8px;\">' + health.qualityRating + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Webhook URL:</td><td style=\"padding: 8px;\">' + health.webhookUrl + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Check Time:</td><td style=\"padding: 8px;\">' + health.timestamp + '</td></tr>';\nhtmlContent += '</table>';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Troubleshooting Steps</h2>';\nhtmlContent += '<ul style=\"padding-left: 20px;\">';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check Meta Developer Dashboard: <a href=\"https://developers.facebook.com/apps/1042510698362546\">Open App</a></li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Verify app is in LIVE mode (not Development)</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check WhatsApp > Configuration > Callback URL and subscribed fields</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Verify n8n is running and webhook endpoint responds</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check Caddy logs for Meta POST requests: docker logs n8n-caddy-1 --since=1h | grep whatsapp</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Re-subscribe app: POST https://graph.facebook.com/v21.0/1613835747059073/subscribed_apps</li>';\nhtmlContent += '</ul>';\nhtmlContent += '<hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">';\nhtmlContent += '<p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was generated by the WhatsApp Webhook Health Monitor (runs every 30 minutes)</p>';\nhtmlContent += '</div></div>';\n\nreturn { json: {\n  sender: { name: 'Horizon Africa AI', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Mohamed' }],\n  subject: 'WhatsApp Webhook Health Alert - ' + issues.length + ' issue(s) detected',\n  htmlContent: htmlContent\n} };\n"
+      }
+    },
+    {
+      "id": "63ad9b36-e6a6-4840-9473-c1815b8da284",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "REDACTED-BREVO-KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "986649cd-b696-4dd5-832c-80c696e023ed",
+      "name": "Check Scheduler Heartbeat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REDACTED-SUPABASE-JWT"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REDACTED-SUPABASE-JWT"
+            }
+          ]
+        },
+        "method": "GET",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/system_heartbeats?name=eq.campaign_process&select=last_run_at"
+      }
+    }
+  ],
+  "nodeGroups": [],
+  "activeVersion": {
+    "nodes": [
+      {
+        "id": "7cfd0a32-0326-4236-b51e-2134e1b254d8",
+        "name": "Every 30 Minutes",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          0
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "minutesInterval": 30
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "60a5d1be-9ddd-4ddc-9f52-4d8f302dc4f2",
+        "name": "Check Last Message",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          224,
+          0
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/conversations?order=timestamp.desc&limit=1&select=timestamp,phone_number,incoming_message",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 10000
+          }
+        }
+      },
+      {
+        "id": "796d5403-31b4-4b9f-8fa9-32ecb8aea555",
+        "name": "Check Meta Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          448,
+          0
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://graph.facebook.com/v21.0/1613835747059073/subscribed_apps",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-META-TOKEN"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 10000
+          }
+        }
+      },
+      {
+        "id": "38baf95d-100a-4a31-b349-db1c3cbd8af7",
+        "name": "Check Phone Status",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          672,
+          0
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://graph.facebook.com/v21.0/1257101724147822?fields=status,code_verification_status,quality_rating,webhook_configuration",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-META-TOKEN"
+              }
+            ]
+          },
+          "options": {
+            "timeout": 10000
+          }
+        }
+      },
+      {
+        "id": "42b5399f-43db-42a6-a7c3-45e5625f3ee8",
+        "name": "Analyze Health",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          0
+        ],
+        "parameters": {
+          "jsCode": "const lastMsg = $('Check Last Message').first().json;\nconst metaSub = $('Check Meta Status').first().json;\nconst phoneStatus = $('Check Phone Status').first().json;\n\nconst now = new Date();\nconst issues = [];\nlet lastMessageTime = null;\nlet minutesSinceLastMessage = null;\n\n// Fix: lastMsg is a flat object from Supabase REST API, not an array\nif (lastMsg && lastMsg.timestamp) {\n  lastMessageTime = new Date(lastMsg.timestamp);\n  minutesSinceLastMessage = Math.round((now - lastMessageTime) / 60000);\n  // Only alert if no messages in 48 hours \u2014 appropriate for low-traffic WhatsApp bot\n  if (minutesSinceLastMessage > 2880) {\n    issues.push('NO_MESSAGES: No WhatsApp messages received in ' + minutesSinceLastMessage + ' minutes (last: ' + lastMessageTime.toISOString() + ')');\n  }\n} else if (!lastMsg || Object.keys(lastMsg).length === 0) {\n  issues.push('NO_HISTORY: No conversation history found in Supabase - webhook may never have received a message');\n}\n\nconst subData = metaSub?.data || [];\nif (subData.length === 0) {\n  issues.push('NOT_SUBSCRIBED: Meta app is NOT subscribed to WABA - webhooks will not be delivered');\n}\n\nif (phoneStatus?.status !== 'CONNECTED') {\n  issues.push('PHONE_DOWN: Phone number status is ' + (phoneStatus?.status || 'UNKNOWN') + ' (expected: CONNECTED)');\n}\n\nif (!phoneStatus?.webhook_configuration?.application) {\n  issues.push('NO_WEBHOOK_URL: No webhook callback URL configured on phone number');\n}\n\n// --- Campaign scheduler heartbeat ---\n// /api/campaigns/process stamps system_heartbeats every run (every 15 min).\n// A stale or missing row means the scheduler silently died.\nlet heartbeatRow = null;\ntry {\n  const hb = $('Check Scheduler Heartbeat').first().json;\n  heartbeatRow = Array.isArray(hb) ? hb[0] : hb;\n} catch (e) {}\nlet schedulerAgeMinutes = null;\nif (!heartbeatRow || !heartbeatRow.last_run_at) {\n  issues.push('SCHEDULER_NO_HEARTBEAT: No campaign_process heartbeat found - scheduler may never have run or the check failed');\n} else {\n  schedulerAgeMinutes = Math.round((now - new Date(heartbeatRow.last_run_at)) / 60000);\n  if (schedulerAgeMinutes > 45) {\n    issues.push('SCHEDULER_STALE: Campaign process last ran ' + schedulerAgeMinutes + ' minutes ago (expected every 15) - n8n scheduler workflow may be down');\n  }\n}\n\nconst isHealthy = issues.length === 0;\n\n// Deduplication: normalize the alert key by stripping dynamic numbers\n// This prevents the same issue from re-triggering every 30 min just because the minute count changed\nconst staticData = $getWorkflowStaticData('global');\nconst issuesKey = issues.map(function(i) { return i.split(':')[0]; }).sort().join('|');\nconst lastAlertKey = staticData.lastAlertKey || '';\nconst lastAlertTime = staticData.lastAlertTime ? new Date(staticData.lastAlertTime) : null;\nconst COOLDOWN_MINUTES = 1440; // Don't re-send the same alert type within 24 hours\n\nlet shouldSendAlert = !isHealthy;\nif (shouldSendAlert && issuesKey === lastAlertKey && lastAlertTime) {\n  const minutesSinceLastAlert = Math.round((now - lastAlertTime) / 60000);\n  if (minutesSinceLastAlert < COOLDOWN_MINUTES) {\n    shouldSendAlert = false;\n  }\n}\n\n// Update static data when sending an alert\nif (shouldSendAlert) {\n  staticData.lastAlertKey = issuesKey;\n  staticData.lastAlertTime = now.toISOString();\n}\n\n// If healthy, reset the alert key so a new issue will trigger immediately\nif (isHealthy) {\n  staticData.lastAlertKey = '';\n}\n\nreturn {\n  json: {\n    isHealthy,\n    shouldSendAlert,\n    issues: issues,\n    issuesCount: issues.length,\n    lastMessageTime: lastMessageTime ? lastMessageTime.toISOString() : null,\n    minutesSinceLastMessage,\n    metaSubscribed: subData.length > 0,\n    phoneStatus: phoneStatus?.status || 'UNKNOWN',\n    codeVerificationStatus: phoneStatus?.code_verification_status || 'UNKNOWN',\n    qualityRating: phoneStatus?.quality_rating || 'UNKNOWN',\n    webhookUrl: phoneStatus?.webhook_configuration?.application || 'NOT SET',\n    schedulerLastRunAt: heartbeatRow?.last_run_at || null,\n    schedulerAgeMinutes,\n    timestamp: now.toISOString()\n  }\n};\n",
+          "mode": "runOnceForAllItems"
+        }
+      },
+      {
+        "id": "f1362cc2-f282-44d4-98c1-a3f1f8fed2b0",
+        "name": "Is Healthy?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          1120,
+          0
+        ],
+        "parameters": {
+          "conditions": {
+            "combinator": "and",
+            "conditions": [
+              {
+                "leftValue": "={{ $json.shouldSendAlert }}",
+                "operator": {
+                  "operation": "equals",
+                  "type": "boolean"
+                },
+                "rightValue": false
+              }
+            ],
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            }
+          }
+        }
+      },
+      {
+        "id": "2fe235cc-ca23-4c15-aa4e-751f2f946f80",
+        "name": "Build Alert Email",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          0
+        ],
+        "parameters": {
+          "jsCode": "const health = $json;\nconst issues = health.issues || [];\nconst issuesList = issues.map(function(i) { return '<li style=\"padding: 5px 0; color: #dc3545;\">' + i + '</li>'; }).join('');\n\nvar htmlContent = '<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">';\nhtmlContent += '<div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">';\nhtmlContent += '<h1 style=\"color: white; margin: 0;\">WhatsApp Webhook Health Alert</h1>';\nhtmlContent += '<p style=\"color: white; margin: 5px 0 0 0;\">Meta webhook delivery may be interrupted</p>';\nhtmlContent += '</div>';\nhtmlContent += '<div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Issues Detected</h2>';\nhtmlContent += '<ul style=\"padding-left: 20px;\">' + issuesList + '</ul>';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">System Status</h2>';\nhtmlContent += '<table style=\"width: 100%; border-collapse: collapse;\">';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Last Message Received:</td><td style=\"padding: 8px;\">' + (health.lastMessageTime || 'Never') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Minutes Since Last:</td><td style=\"padding: 8px;\">' + (health.minutesSinceLastMessage || 'N/A') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Meta App Subscribed:</td><td style=\"padding: 8px;\">' + (health.metaSubscribed ? 'Yes' : 'NO') + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Phone Status:</td><td style=\"padding: 8px;\">' + health.phoneStatus + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Code Verification:</td><td style=\"padding: 8px;\">' + health.codeVerificationStatus + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Quality Rating:</td><td style=\"padding: 8px;\">' + health.qualityRating + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Webhook URL:</td><td style=\"padding: 8px;\">' + health.webhookUrl + '</td></tr>';\nhtmlContent += '<tr><td style=\"padding: 8px; font-weight: bold;\">Check Time:</td><td style=\"padding: 8px;\">' + health.timestamp + '</td></tr>';\nhtmlContent += '</table>';\nhtmlContent += '<h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Troubleshooting Steps</h2>';\nhtmlContent += '<ul style=\"padding-left: 20px;\">';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check Meta Developer Dashboard: <a href=\"https://developers.facebook.com/apps/1042510698362546\">Open App</a></li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Verify app is in LIVE mode (not Development)</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check WhatsApp > Configuration > Callback URL and subscribed fields</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Verify n8n is running and webhook endpoint responds</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Check Caddy logs for Meta POST requests: docker logs n8n-caddy-1 --since=1h | grep whatsapp</li>';\nhtmlContent += '<li style=\"padding: 5px 0;\">Re-subscribe app: POST https://graph.facebook.com/v21.0/1613835747059073/subscribed_apps</li>';\nhtmlContent += '</ul>';\nhtmlContent += '<hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">';\nhtmlContent += '<p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was generated by the WhatsApp Webhook Health Monitor (runs every 30 minutes)</p>';\nhtmlContent += '</div></div>';\n\nreturn { json: {\n  sender: { name: 'Horizon Africa AI', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Mohamed' }],\n  subject: 'WhatsApp Webhook Health Alert - ' + issues.length + ' issue(s) detected',\n  htmlContent: htmlContent\n} };\n"
+        }
+      },
+      {
+        "id": "63ad9b36-e6a6-4840-9473-c1815b8da284",
+        "name": "Send Alert Email",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1568,
+          0
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.brevo.com/v3/smtp/email",
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "api-key",
+                "value": "REDACTED-BREVO-KEY"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "json",
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+          "options": {
+            "timeout": 10000
+          }
+        }
+      },
+      {
+        "id": "986649cd-b696-4dd5-832c-80c696e023ed",
+        "name": "Check Scheduler Heartbeat",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          896,
+          96
+        ],
+        "parameters": {
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "REDACTED-SUPABASE-JWT"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer REDACTED-SUPABASE-JWT"
+              }
+            ]
+          },
+          "method": "GET",
+          "options": {
+            "timeout": 10000
+          },
+          "sendHeaders": true,
+          "specifyHeaders": "keypair",
+          "url": "https://gbchhzipbbxpvgtaheze.supabase.co/rest/v1/system_heartbeats?name=eq.campaign_process&select=last_run_at"
+        }
+      }
+    ],
+    "connections": {
+      "Every 30 Minutes": {
+        "main": [
+          [
+            {
+              "node": "Check Last Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Last Message": {
+        "main": [
+          [
+            {
+              "node": "Check Meta Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Meta Status": {
+        "main": [
+          [
+            {
+              "node": "Check Phone Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Analyze Health": {
+        "main": [
+          [
+            {
+              "node": "Is Healthy?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Healthy?": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Build Alert Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Alert Email": {
+        "main": [
+          [
+            {
+              "node": "Send Alert Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Phone Status": {
+        "main": [
+          [
+            {
+              "node": "Check Scheduler Heartbeat",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Scheduler Heartbeat": {
+        "main": [
+          [
+            {
+              "node": "Analyze Health",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": []
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  },
+  "parentFolderId": null,
+  "description": "Runs every 30 minutes. Checks Supabase for last message timestamp, Meta Graph API for subscribed_apps status, and phone number health. Sends email alert if webhooks appear to not be delivering or if Meta configuration is broken.",
+  "scopes": [
+    "execution:reveal",
+    "workflow:create",
+    "workflow:delete",
+    "workflow:disableRedaction",
+    "workflow:enableRedaction",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:export",
+    "workflow:import",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update"
+  ],
+  "canExecute": true
+}

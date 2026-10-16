@@ -1,0 +1,101 @@
+{
+  "id": "9Hc0ZrL3H5LucMyA",
+  "name": "Webhook Proxy Error Alert",
+  "active": true,
+  "versionId": "c75b840d-abfb-4309-89a2-d5b06011597c",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Webhook Proxy Error": {
+      "main": [
+        [
+          {
+            "node": "Build Error Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Email": {
+      "main": [
+        [
+          {
+            "node": "Send Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "id": "78dc6bda-6466-4b4d-b5bb-5808760d5a14",
+      "name": "Webhook Proxy Error",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6c821edd-8628-4623-bc6f-eeceadb71b32",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-proxy-error",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "6bffc9fe-95d2-4e29-bf09-695bd86719de",
+      "name": "Build Error Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst errorMsg = body.error || body.message || 'Unknown error';\nconst timestamp = body.timestamp || new Date().toISOString();\nconst source = body.source || 'Vercel Webhook Proxy';\n\nconst htmlContent = `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background: #dc3545; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;\">\n    <h1 style=\"color: white; margin: 0;\">\u26a0\ufe0f WhatsApp Webhook Proxy Error</h1>\n    <p style=\"color: white; margin: 5px 0 0 0;\">The Vercel proxy failed to forward a Meta webhook event to n8n</p>\n  </div>\n  <div style=\"padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;\">\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px;\">Error Details</h2>\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr><td style=\"padding: 8px; font-weight: bold; width: 180px;\">Source:</td><td style=\"padding: 8px;\">${source}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Error:</td><td style=\"padding: 8px; color: #dc3545;\">${errorMsg}</td></tr>\n      <tr><td style=\"padding: 8px; font-weight: bold;\">Time:</td><td style=\"padding: 8px;\">${timestamp}</td></tr>\n    </table>\n    <h2 style=\"color: #333; border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-top: 20px;\">Action Required</h2>\n    <ul style=\"padding-left: 20px;\">\n      <li style=\"padding: 5px 0;\">Check if n8n is running: <a href=\"https://n8n.horizonafrica.co.za\">Open n8n</a></li>\n      <li style=\"padding: 5px 0;\">Check Vercel deployment: <a href=\"https://dashboard.horizonafrica.co.za\">Open Dashboard</a></li>\n      <li style=\"padding: 5px 0;\">Verify the Inbound AI workflow is active</li>\n      <li style=\"padding: 5px 0;\">Inbound WhatsApp messages are NOT being delivered while this is broken</li>\n    </ul>\n    <hr style=\"margin-top: 20px; border: none; border-top: 1px solid #ddd;\">\n    <p style=\"color: #999; font-size: 12px; text-align: center;\">This alert was sent by the Vercel Webhook Proxy error handler</p>\n  </div>\n</div>`;\n\nreturn { json: {\n  sender: { name: 'Horizon Africa Alerts', email: 'keshlan@horizonafrica.co.za' },\n  to: [{ email: 'sifosman@gmail.com', name: 'Sif' }],\n  subject: '\u26a0\ufe0f WhatsApp Webhook Proxy Error - ' + errorMsg.substring(0, 50),\n  htmlContent: htmlContent\n} };"
+      }
+    },
+    {
+      "id": "393101d6-af22-4755-9a0d-a1987486a054",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "REDACTED-BREVO-KEY-SEE-LIVE-WORKFLOW"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sender: $json.sender, to: $json.to, subject: $json.subject, htmlContent: $json.htmlContent }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    }
+  ],
+  "description": "Receives error alerts from the Vercel webhook proxy when it fails to forward Meta webhook events to n8n. Sends an email alert via Brevo."
+}
