@@ -35,3 +35,4 @@ tests/test-results.json
 tests/*-results.json
 backups/
 repurpose/*.pages
+repurpose/*env*.txt
