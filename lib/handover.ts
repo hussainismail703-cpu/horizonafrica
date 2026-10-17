@@ -78,17 +78,37 @@ export async function setHumanTakeover(
   if (error) return { ok: false, matched: 0, error: error.message };
 
   let matched = updated?.length ?? 0;
+  let firstLeadId = updated?.[0]?.id ?? null;
   if (takeOver && matched === 0) {
-    const { error: insertError } = await supabase.from("leads").insert({
-      phone_number: normalizePhone(phone),
-      human_takeover: true,
-      human_takeover_at: now,
-      human_takeover_by: by,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("leads")
+      .insert({
+        phone_number: normalizePhone(phone),
+        human_takeover: true,
+        human_takeover_at: now,
+        human_takeover_by: by,
+      })
+      .select("id")
+      .single();
     if (insertError) {
       return { ok: false, matched: 0, error: insertError.message };
     }
     matched = 1;
+    firstLeadId = inserted?.id ?? null;
+  }
+
+  // Scope-freeze §8: one handover_events row per action so the Handover
+  // metric survives release (human_takeover_at is nulled on release).
+  // Best-effort — a failed audit insert must not block the handover itself.
+  try {
+    await supabase.from("handover_events").insert({
+      phone_number: normalizePhone(phone),
+      lead_id: firstLeadId,
+      action: takeOver ? "takeover" : "release",
+      actor: by,
+    });
+  } catch {
+    // ignore — metric may undercount but the handover still happened
   }
 
   return { ok: true, matched };
