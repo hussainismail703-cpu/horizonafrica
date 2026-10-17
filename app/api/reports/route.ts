@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
     recentConversations,
     broadcastHistory,
     allOrders,
+    orderFollowUps,
+    handoverEventsInRange,
+    activeTakeovers,
+    optOutsInRange,
+    totalOptOuts,
   ] = await Promise.all([
     supabase
       .from("leads")
@@ -91,8 +96,28 @@ export async function GET(request: NextRequest) {
       .limit(10),
     supabase
       .from("orders")
-      .select("order_track, status, total_cents")
+      .select("id, order_track, status, total_cents")
       .gte("created_at", startDateISO),
+    supabase
+      .from("follow_ups")
+      .select("order_id")
+      .not("order_id", "is", null),
+    supabase
+      .from("handover_events")
+      .select("*", { count: "exact", head: true })
+      .eq("action", "takeover")
+      .gte("created_at", startDateISO),
+    supabase
+      .from("leads")
+      .select("*", { count: "exact", head: true })
+      .eq("human_takeover", true),
+    supabase
+      .from("opt_out_list")
+      .select("*", { count: "exact", head: true })
+      .gte("opted_out_at", startDateISO),
+    supabase
+      .from("opt_out_list")
+      .select("*", { count: "exact", head: true }),
   ]);
 
   const totalLeads = allLeads.data?.length ?? 0;
@@ -244,6 +269,56 @@ export async function GET(request: NextRequest) {
     { track: "imported" as const, label: "Imported", ...trackAgg.imported },
   ];
 
+  // Scope-freeze §8 metrics --------------------------------------------------
+  // Follow-up conversion: a paid order that had entered the unpaid-order
+  // follow-up sequence (≥1 follow_ups row), split by order track.
+  const orderTrackById = new Map<string, string>();
+  allOrders.data?.forEach((o) => orderTrackById.set(o.id, o.order_track));
+  const sequencedOrderIds = new Set<string>();
+  orderFollowUps.data?.forEach((f) => {
+    if (f.order_id) sequencedOrderIds.add(f.order_id);
+  });
+  const followUpAgg: Record<string, { entered: number; converted: number }> = {
+    stock_on_hand: { entered: 0, converted: 0 },
+    imported: { entered: 0, converted: 0 },
+  };
+  allOrders.data?.forEach((order) => {
+    if (!sequencedOrderIds.has(order.id)) return;
+    const bucket = followUpAgg[order.order_track];
+    if (!bucket) return;
+    bucket.entered++;
+    if (order.status === "paid") bucket.converted++;
+  });
+  const followUpConversion = [
+    {
+      track: "stock_on_hand" as const,
+      ...followUpAgg.stock_on_hand,
+      rate: followUpAgg.stock_on_hand.entered > 0
+        ? Math.round((followUpAgg.stock_on_hand.converted / followUpAgg.stock_on_hand.entered) * 100)
+        : 0,
+    },
+    {
+      track: "imported" as const,
+      ...followUpAgg.imported,
+      rate: followUpAgg.imported.entered > 0
+        ? Math.round((followUpAgg.imported.converted / followUpAgg.imported.entered) * 100)
+        : 0,
+    },
+  ];
+
+  // Handover (§8): conversations taken over by a team member, counted from
+  // the handover_events audit trail; active = currently under human control.
+  const handovers = {
+    inRange: handoverEventsInRange.count ?? 0,
+    active: activeTakeovers.count ?? 0,
+  };
+
+  // Opt-out (§8): customers who asked not to be contacted.
+  const optOuts = {
+    inRange: optOutsInRange.count ?? 0,
+    total: totalOptOuts.count ?? 0,
+  };
+
   return NextResponse.json({
     kpis: {
       totalLeads,
@@ -261,5 +336,8 @@ export async function GET(request: NextRequest) {
     productInterests,
     escalationRate: escalationData,
     ordersByTrack,
+    followUpConversion,
+    handovers,
+    optOuts,
   });
 }

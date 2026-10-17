@@ -63,6 +63,14 @@ interface ReportsResponse {
     handedToOrders: number;
     revenueCents: number;
   }[];
+  followUpConversion: {
+    track: "stock_on_hand" | "imported";
+    entered: number;
+    converted: number;
+    rate: number;
+  }[];
+  handovers: { inRange: number; active: number };
+  optOuts: { inRange: number; total: number };
 }
 
 export default function ReportsPage() {
@@ -78,6 +86,9 @@ export default function ReportsPage() {
     escalationRate: 0,
   });
   const [ordersByTrack, setOrdersByTrack] = useState<ReportsResponse["ordersByTrack"]>([]);
+  const [followUpConversion, setFollowUpConversion] = useState<ReportsResponse["followUpConversion"]>([]);
+  const [handovers, setHandovers] = useState({ inRange: 0, active: 0 });
+  const [optOuts, setOptOuts] = useState({ inRange: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +109,9 @@ export default function ReportsPage() {
       const json: ReportsResponse = await res.json();
       setKpis(json.kpis);
       setOrdersByTrack(json.ordersByTrack ?? []);
+      setFollowUpConversion(json.followUpConversion ?? []);
+      setHandovers(json.handovers ?? { inRange: 0, active: 0 });
+      setOptOuts(json.optOuts ?? { inRange: 0, total: 0 });
       setData({
         leadsOverTime: json.leadsOverTime,
         scoreDistribution: json.scoreDistribution,
@@ -213,42 +227,86 @@ export default function ReportsPage() {
           </div>
 
           {/* Orders by track — stock-on-hand and imported are reported
-              separately per scope freeze §6 */}
+              separately per scope freeze §6; metrics per §8 */}
           {ordersByTrack.length > 0 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {ordersByTrack.map((t) => (
-                <div
-                  key={t.track}
-                  className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-5"
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-on-surface">{t.label} orders</h3>
-                    <span className="text-xs text-on-surface-variant">{t.total} total</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <p className="text-lg font-bold text-on-surface">{t.paid}</p>
-                      <p className="text-[11px] text-on-surface-variant">Paid</p>
+              {ordersByTrack.map((t) => {
+                const fu = followUpConversion.find((f) => f.track === t.track);
+                return (
+                  <div
+                    key={t.track}
+                    className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-5"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-on-surface">{t.label} orders</h3>
+                      <span className="text-xs text-on-surface-variant">{t.total} created</span>
                     </div>
-                    <div>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div>
+                        <p className="text-lg font-bold text-on-surface">{t.paid}</p>
+                        <p className="text-[11px] text-on-surface-variant">Paid</p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-on-surface">
+                          {t.track === "imported" ? t.handedToOrders : t.inProgress}
+                        </p>
+                        <p className="text-[11px] text-on-surface-variant">
+                          {t.track === "imported" ? "With orders team" : "Awaiting payment"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-on-surface">
+                          R{(t.revenueCents / 100).toFixed(0)}
+                        </p>
+                        <p className="text-[11px] text-on-surface-variant">Revenue</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 border-t border-outline-variant/40 pt-3 text-center">
                       <p className="text-lg font-bold text-on-surface">
-                        {t.track === "imported" ? t.handedToOrders : t.inProgress}
+                        {fu ? `${fu.converted}/${fu.entered}` : "0/0"}
+                        <span className="ml-1 text-xs font-normal text-on-surface-variant">
+                          ({fu?.rate ?? 0}%)
+                        </span>
                       </p>
                       <p className="text-[11px] text-on-surface-variant">
-                        {t.track === "imported" ? "With orders team" : "Awaiting payment"}
+                        Follow-up conversions (unpaid → paid)
                       </p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-on-surface">
-                        R{(t.revenueCents / 100).toFixed(0)}
-                      </p>
-                      <p className="text-[11px] text-on-surface-variant">Revenue</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
+          {/* §8 Handover + Opt-out metrics */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-5">
+              <h3 className="text-sm font-semibold text-on-surface">Human handovers</h3>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <p className="text-lg font-bold text-on-surface">{handovers.inRange}</p>
+                  <p className="text-[11px] text-on-surface-variant">In period</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-on-surface">{handovers.active}</p>
+                  <p className="text-[11px] text-on-surface-variant">Active now</p>
+                </div>
+              </div>
+            </div>
+            <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-5">
+              <h3 className="text-sm font-semibold text-on-surface">Opt-outs</h3>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <p className="text-lg font-bold text-on-surface">{optOuts.inRange}</p>
+                  <p className="text-[11px] text-on-surface-variant">In period</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-on-surface">{optOuts.total}</p>
+                  <p className="text-[11px] text-on-surface-variant">Total opted out</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Charts */}
           <ReportsCharts data={data} />
