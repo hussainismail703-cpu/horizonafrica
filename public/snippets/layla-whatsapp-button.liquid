@@ -1,0 +1,98 @@
+{% comment %}
+  ==================================================================
+  Layla WhatsApp Chat Button — Eastern Wear by Kersh
+  ==================================================================
+  A floating WhatsApp button that opens a chat with Layla carrying
+  the product/page context, so the AI assistant knows which garment
+  the customer was viewing.
+
+  USAGE
+    Add inside the theme where a floating element is acceptable:
+
+      {% render 'layla-whatsapp-button' %}
+
+  OPTIONAL PARAMETERS (passed to render)
+    whatsapp_number : international digits only, no '+' or spaces.
+                      Default: '27757774389' (the verified number).
+    button_color    : hex colour for the button background.
+                      Default: '#25D366' (WhatsApp green).
+    position        : 'bottom-right' (default) or 'bottom-left'.
+    product_only    : true renders the button ONLY on product pages.
+                      Default: false (shows on all pages; non-product
+                      pages send a generic greeting).
+
+  NOTES
+    - Self-contained: inline SVG icon, inline styles, no JS
+      dependencies, no external assets.
+    - Render the snippet only once per page — `{% render %}` has an
+      isolated scope, so a duplicate render would emit a second button.
+    - The prefill text is the contract with the AI backend: the
+      product URL inside it carries /products/<handle>, which the
+      assistant uses to identify the garment. Do not remove the
+      "(url)" part of the prefill.
+  ==================================================================
+{% endcomment %}
+
+{%- assign ew_wa_number = whatsapp_number | default: '27757774389' -%}
+{%- assign ew_wa_color = button_color | default: '#25D366' -%}
+{%- assign ew_wa_position = position | default: 'bottom-right' -%}
+{%- assign ew_wa_product_only = product_only | default: false -%}
+{%- assign ew_wa_is_product = false -%}
+{%- if request.page_type == 'product' and product -%}
+  {%- assign ew_wa_is_product = true -%}
+{%- endif -%}
+
+{%- if ew_wa_is_product or ew_wa_product_only == false -%}
+    {%- if ew_wa_is_product -%}
+      {%- capture ew_wa_message -%}
+        Hi Layla! I'm looking at the {{ product.title }} ({{ shop.url }}{{ product.url }}) — is it available?
+      {%- endcapture -%}
+    {%- else -%}
+      {%- capture ew_wa_message -%}
+        Hi Layla! I have a question about something on {{ shop.name }}.
+      {%- endcapture -%}
+    {%- endif -%}
+    {%- assign ew_wa_message = ew_wa_message | strip | strip_newlines -%}
+    {%- assign ew_wa_href = 'https://wa.me/' | append: ew_wa_number | append: '?text=' | append: (ew_wa_message | url_encode) -%}
+
+    <a
+      href="{{ ew_wa_href }}"
+      class="layla-whatsapp-button"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat to Layla on WhatsApp{% if ew_wa_is_product %} about {{ product.title | escape }}{% endif %}"
+      style="
+        position: fixed;
+        {% if ew_wa_position == 'bottom-left' %}left: 20px;{% else %}right: 20px;{% endif %}
+        bottom: 20px;
+        z-index: 9999;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background-color: {{ ew_wa_color }};
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      "
+      onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 6px 16px rgba(0,0,0,0.3)'"
+      onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.25)'"
+      onfocus="this.style.outline='3px solid {{ ew_wa_color }}';this.style.outlineOffset='3px'"
+      onblur="this.style.outline='none'"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 32 32"
+        width="30"
+        height="30"
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M16.004 2.667c-7.363 0-13.334 5.97-13.334 13.333 0 2.35.615 4.65 1.786 6.674L2.667 29.333l6.834-1.792a13.28 13.28 0 0 0 6.497 1.656h.006c7.36 0 13.33-5.968 13.33-13.331 0-3.561-1.388-6.91-3.908-9.427a13.27 13.27 0 0 0-9.422-3.772zm0 2.514c5.966 0 10.816 4.852 10.816 10.819 0 5.966-4.85 10.816-10.816 10.816a10.77 10.77 0 0 1-5.496-1.506l-.395-.235-4.08 1.07 1.09-3.98-.257-.408a10.75 10.75 0 0 1-1.657-5.757c0-5.967 4.85-10.819 10.795-10.819zm-4.475 5.42c-.244 0-.636.09-.97.454-.332.363-1.27 1.24-1.27 3.024 0 1.783 1.298 3.504 1.479 3.745.182.242 2.506 3.997 6.16 5.445 3.049 1.207 3.666.968 4.33.907.663-.06 2.14-.874 2.44-1.719.302-.844.302-1.567.212-1.718-.091-.152-.333-.243-.696-.425-.364-.183-2.141-1.057-2.472-1.177-.333-.121-.574-.182-.816.181-.242.364-.936 1.177-1.147 1.419-.212.242-.423.272-.787.09-.364-.18-1.536-.566-2.925-1.804-1.08-.963-1.81-2.152-2.02-2.516-.212-.364-.023-.561.16-.743.164-.163.364-.424.545-.636.182-.212.242-.364.364-.606.12-.242.06-.455-.03-.637-.091-.181-.816-1.966-1.118-2.692-.294-.706-.594-.61-.816-.62-.21-.01-.453-.013-.696-.013z"/>
+      </svg>
+    </a>
+{%- endif -%}

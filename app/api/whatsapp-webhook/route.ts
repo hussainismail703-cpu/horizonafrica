@@ -207,7 +207,12 @@ export async function POST(request: NextRequest) {
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: {
-        "Content-Type": contentType,
+        // forwardBody is always a JSON string (either the original Meta body or
+        // the re-serialized payload with _layla_context). Label it as JSON even
+        // when the inbound request was mislabeled — n8n parses body by
+        // content-type, and a text/plain label would leave it as an unparsed
+        // string that downstream nodes silently drop.
+        "Content-Type": parsed ? "application/json" : contentType,
       },
       body: forwardBody,
     });
