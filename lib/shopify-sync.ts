@@ -170,6 +170,16 @@ export async function syncAllProducts(supabase: SupabaseClient): Promise<SyncRes
 }
 
 export function customerToRow(customer: ShopifyCustomer) {
+  // WhatsApp broadcasts ride on phone numbers, so SMS marketing consent is the
+  // governing signal; fall back to the legacy accepts_marketing flag, else NULL
+  // (unknown — treated as consented-by-default in broadcast sync).
+  const smsState = customer.sms_marketing_consent?.state;
+  const acceptsMarketing =
+    smsState === "subscribed"
+      ? true
+      : smsState
+        ? false
+        : (customer.accepts_marketing ?? null);
   return {
     shopify_customer_id: customer.id,
     phone: customer.phone ? normalizePhone(customer.phone) : null,
@@ -178,6 +188,7 @@ export function customerToRow(customer: ShopifyCustomer) {
     orders_count: customer.orders_count ?? 0,
     total_spent_cents: Math.round(parseFloat(customer.total_spent ?? "0") * 100),
     tags: customer.tags ? customer.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+    accepts_marketing: acceptsMarketing,
     last_synced_at: new Date().toISOString(),
   };
 }

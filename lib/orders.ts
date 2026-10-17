@@ -7,6 +7,10 @@ import {
   type DraftOrderResult,
 } from "@/lib/shopify";
 import { normalizePhone } from "@/lib/phone-utils";
+import {
+  cancelOrderFollowUps,
+  scheduleOrderFollowUps,
+} from "@/lib/order-follow-ups";
 import type { DeliveryMethod, Order, OrderItem } from "@/lib/types";
 
 const UUID_REGEX =
@@ -383,6 +387,10 @@ export async function createOrder(
       .eq("id", lead.id);
   }
 
+  // Queue the unpaid-order nudge sequence (M6): first nudge at
+  // created_at + FOLLOWUP_HOURS[0], subsequent steps handled by the cron.
+  await scheduleOrderFollowUps(supabase, order as Order);
+
   return { ok: true, order: order as Order };
 }
 
@@ -513,6 +521,8 @@ export async function markOrderPaid(
       payload: input.payload ?? null,
     },
   });
+
+  await cancelOrderFollowUps(supabase, order.id);
 
   return { matched: true, alreadyPaid: false, order: paidOrder };
 }
@@ -661,6 +671,7 @@ export async function expireStaleOrders(
       event: "expired",
       detail: { cutoff },
     });
+    await cancelOrderFollowUps(supabase, row.id);
   }
   return { expired };
 }

@@ -113,6 +113,8 @@ export interface ShopifyCustomer {
   orders_count: number;
   total_spent: string;
   tags: string;
+  accepts_marketing?: boolean | null;
+  sms_marketing_consent?: { state: string } | null;
 }
 
 export function isShopifyConfigured(): boolean {

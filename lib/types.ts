@@ -83,6 +83,7 @@ export interface BroadcastContact {
   contact_name: string | null;
   group_id: number | null;
   opt_in: boolean;
+  source: string;
   created_at: string;
 }
 
@@ -348,6 +349,7 @@ export interface ShopifyCustomerRow {
   orders_count: number;
   total_spent_cents: number;
   tags: string[];
+  accepts_marketing: boolean | null;
   synced_to_broadcast: boolean;
   last_synced_at: string | null;
   created_at: string;
@@ -417,4 +419,29 @@ export interface OrderEvent {
   event: string;
   detail: Record<string, unknown> | null;
   created_at: string;
+}
+
+// ---- Order follow-ups (Eastern Wear M6) ------------------------------------
+
+export type OrderFollowUpStatus =
+  | "pending"
+  | "sending"
+  | "sent"
+  | "failed"
+  | "cancelled";
+
+export interface OrderFollowUp {
+  id: string;
+  order_id: string | null;
+  lead_id: number | null;
+  phone_number: string;
+  sequence_step: number;
+  template_name: string;
+  scheduled_for: string;
+  status: OrderFollowUpStatus;
+  meta_message_id: string | null;
+  error: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

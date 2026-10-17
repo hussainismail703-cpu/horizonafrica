@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { Lead } from "@/lib/types";
-import { formatDate, formatTime } from "@/lib/format";
+import { Lead, OrderFollowUp } from "@/lib/types";
+import { formatDate, formatDateTime, formatTime } from "@/lib/format";
 import {
   Bell,
   Send,
@@ -12,10 +12,16 @@ import {
   AlertCircle,
   Loader2,
   RefreshCw,
+  ShoppingBag,
 } from "lucide-react";
+
+interface OrderNudge extends OrderFollowUp {
+  orders: { order_number: number; status: string } | null;
+}
 
 interface FollowUpsManagerProps {
   initialLeads: Lead[];
+  orderNudges?: OrderNudge[];
 }
 
 interface SendResult {
@@ -52,7 +58,15 @@ function getStatusBadge(lead: Lead) {
   };
 }
 
-export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
+const NUDGE_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: "Scheduled", color: "text-amber-700", bg: "bg-amber-100" },
+  sending: { label: "Sending", color: "text-blue-700", bg: "bg-blue-100" },
+  sent: { label: "Sent", color: "text-green-700", bg: "bg-green-100" },
+  failed: { label: "Failed", color: "text-red-700", bg: "bg-red-100" },
+  cancelled: { label: "Stopped", color: "text-on-surface-variant", bg: "bg-surface-container-high" },
+};
+
+export function FollowUpsManager({ initialLeads, orderNudges = [] }: FollowUpsManagerProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [sending, setSending] = useState(false);
   const [sendingId, setSendingId] = useState<number | null>(null);
@@ -338,6 +352,76 @@ export function FollowUpsManager({ initialLeads }: FollowUpsManagerProps) {
                 <td colSpan={6} className="px-5 py-12 text-center text-on-surface-variant">
                   <Bell className="mx-auto mb-2 h-8 w-8 opacity-30" />
                   No follow-ups scheduled. Schedule a follow-up from a lead&apos;s detail view.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Order Payment Reminders */}
+      <div className="card-shadow overflow-x-auto rounded-xl border border-surface-variant bg-surface-container-lowest">
+        <div className="flex items-center gap-3 border-b border-outline-variant bg-surface-container-low px-5 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ShoppingBag className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-on-surface">Order Payment Reminders</h2>
+            <p className="text-xs text-on-surface-variant">
+              Automated nudges for orders still awaiting payment
+            </p>
+          </div>
+        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-outline-variant bg-surface-container-low text-left text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+              <th className="px-5 py-4">Phone</th>
+              <th className="px-5 py-4">Order</th>
+              <th className="px-5 py-4">Nudge</th>
+              <th className="px-5 py-4">Scheduled</th>
+              <th className="px-5 py-4">Status</th>
+              <th className="px-5 py-4">Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orderNudges.length > 0 ? (
+              orderNudges.map((nudge) => {
+                const badge = NUDGE_STATUS[nudge.status] ?? NUDGE_STATUS.pending;
+                return (
+                  <tr
+                    key={nudge.id}
+                    className="border-b border-outline-variant/30 transition hover:bg-surface-container-low last:border-0"
+                  >
+                    <td className="px-5 py-3.5 text-on-surface">{nudge.phone_number}</td>
+                    <td className="px-5 py-3.5 text-on-surface-variant">
+                      {nudge.orders?.order_number
+                        ? `#${nudge.orders.order_number}`
+                        : "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-on-surface-variant">
+                      #{nudge.sequence_step} · {nudge.template_name}
+                    </td>
+                    <td className="px-5 py-3.5 text-on-surface-variant">
+                      {formatDateTime(nudge.scheduled_for)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${badge.bg} ${badge.color}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-red-700">
+                      {nudge.error ?? ""}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} className="px-5 py-12 text-center text-on-surface-variant">
+                  <ShoppingBag className="mx-auto mb-2 h-8 w-8 opacity-30" />
+                  No order payment reminders. They are scheduled automatically when an order is created.
                 </td>
               </tr>
             )}
