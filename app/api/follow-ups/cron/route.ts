@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendFollowUps } from "@/lib/follow-ups";
+import { sendOrderFollowUps } from "@/lib/order-follow-ups";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await sendFollowUps();
+  const orderResult = await sendOrderFollowUps();
 
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, order_follow_ups: orderResult });
 }

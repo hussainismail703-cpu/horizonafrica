@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BroadcastGroup, BroadcastContact } from "@/lib/types";
-import { Send, Loader2, CheckCircle2, XCircle, Plus, Trash2, RefreshCw, Info, Upload, Download } from "lucide-react";
+import { Send, Loader2, CheckCircle2, XCircle, Plus, Trash2, RefreshCw, Info, Upload, Download, Store } from "lucide-react";
 
 interface BroadcastFormProps {
   groups: BroadcastGroup[];
@@ -381,6 +382,8 @@ interface ContactsManagerProps {
 }
 
 export function ContactsManager({ groups, contacts: initialContacts }: ContactsManagerProps) {
+  const router = useRouter();
+  const [syncing, setSyncing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [newName, setNewName] = useState("");
@@ -485,11 +488,43 @@ export function ContactsManager({ groups, contacts: initialContacts }: ContactsM
     window.open("/api/broadcasts/contacts/template", "_blank");
   }
 
+  async function syncShopify() {
+    setSyncing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/broadcasts/sync-shopify", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Shopify sync failed");
+        toast.error(data.error ?? "Shopify sync failed");
+      } else {
+        toast.success(
+          `Synced ${data.customers_synced} Shopify customers — ${data.contacts_created} added, ${data.contacts_updated} updated` +
+            (data.opted_out_excluded ? `, ${data.opted_out_excluded} opted out` : "")
+        );
+        router.refresh();
+      }
+    } catch {
+      setError("Network error syncing Shopify customers");
+      toast.error("Network error syncing Shopify customers");
+    }
+    setSyncing(false);
+  }
+
   return (
     <div className="card-shadow rounded-xl border border-surface-variant bg-surface-container-lowest p-6">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-on-surface">Contacts</h2>
         <div className="flex items-center gap-2">
+          <button
+            onClick={syncShopify}
+            disabled={syncing}
+            className="flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high disabled:opacity-50"
+            title="Import customers from the Shopify store into the Eastern Wear Customers group"
+          >
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Store className="h-4 w-4" />}
+            {syncing ? "Syncing..." : "Sync Shopify"}
+          </button>
           <button
             onClick={downloadTemplate}
             className="flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high"
