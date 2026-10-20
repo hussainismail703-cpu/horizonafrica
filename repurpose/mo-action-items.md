@@ -33,10 +33,11 @@ details come from the website. Still to confirm:
 
 ## 2. WhatsApp template copy — ~15 rewrites
 
-- [ ] Get client's approved content direction for the ~15 template rewrites
-      (order updates, payment reminders, follow-ups, notifications)
-- [ ] Confirm which of the existing `horizon_*`/Layla templates to retire vs
-      rewrite
+- [x] Content direction received — client's business doc (Templates 1 & 2 +
+      §5 rules) is loaded in `n8n/prompts/business-rules.md`
+- [ ] Asif to approve the drafted set in
+      `repurpose/ew-meta-templates-draft.md` (10 templates covering orders,
+      payment reminders, follow-ups, campaign outreach)
 - [ ] Submit to Meta early — approval is 24–48h **each** and runs in parallel;
       it's a long-lead item that shouldn't wait for cutover
 
