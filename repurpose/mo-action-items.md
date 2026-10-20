@@ -8,26 +8,24 @@ Items are roughly in priority order. #1 unblocks the most downstream work.
 
 ---
 
-## 1. Client business rules — fill in the blanks ⚠️ top blocker
+## 1. Client business rules — ✅ mostly done (20 Oct 2026)
 
-The client's Business Overview + FAQ documents were never provided, so
-`n8n/prompts/business-rules.md` still has **14 unanswered TODOs**. Layla cannot
-go live while these are blank — she is forbidden from inventing fees/policies.
+Filled from the client's business-rules email (§5–6) and the
+easternwearbykersh.com policy pages. Collection is free on the Bluff, standard
+delivery is R120 (3–5 days) and express is R150 (1–3 days). The imported-order
+and stock-on-hand terms come from Templates 1 and 2. The returns and contact
+details come from the website. Still to confirm:
 
-Send the client's docs, or answer directly:
-
-- [ ] Shipping fee (national flat rate / free-over-amount?)
-- [ ] Courier / delivery partner used
-- [ ] Stock-on-hand delivery time (e.g. 2–4 working days)
-- [ ] Areas served / exclusions
-- [ ] Tracking: provided? how is it sent to the customer?
-- [ ] Collection available? Address + hours + what the customer brings
-- [ ] Imported items: cancellation/refund policy once ordered
-- [ ] Returns/exchanges: window, conditions, excluded items, who pays shipping,
-      how a return is initiated
-- [ ] Payment gateway: **PayFast or Yoco — which merchant account is live?**
-- [ ] Size guide (link or table)
-- [ ] Business hours + after-hours handling preference
+- [ ] Collection closing time: the email says **17:00**, the website says
+      **16:30** (Layla currently says 16:30)
+- [ ] Which gateway the WhatsApp payment links use (the website shows Payflex)
+- [ ] Template 2 says stock **cannot be reserved before payment**, but the M3
+      order flow reserves Shopify stock while the payment link is open. Keep
+      the reservation or remove it?
+- [ ] Website Contact page shows `+276824771999` (one digit too many). It
+      should probably be 068 247 7199, which the client should fix in Shopify
+- [ ] No size guide is published. Layla quotes the size from each product
+      description (e.g. "India XL = SA 36") and offers the team for measurements
 
 ## 2. WhatsApp template copy — ~15 rewrites
 
@@ -45,8 +43,9 @@ Send the client's docs, or answer directly:
 
 ## 4. Decisions needed in writing
 
-- [ ] **Telecoms data**: keep the Horizon Africa leads/conversations/campaigns
-      or wipe them? Wiping needs your written go-ahead (backups already exist)
+- [x] **Telecoms data**: KEEP (Asif, 19 Oct). Stays in Supabase; client export
+      zip ready at `backups/horizon-africa-data-export-2026-10-20.zip`
+- [ ] WeTransfer the export zip to the client
 - [ ] **Pilot scope**: agree the controlled-pilot plan in writing per §10.3 —
       test customers/orders, must include ≥1 real paid order
 - [ ] **Cutover window**: pick a quiet date/time for the number cutover (with
@@ -62,12 +61,16 @@ Send the client's docs, or answer directly:
       `META_WEBHOOK_ENFORCE_SIGNATURE` in Vercel at cutover (guide is in the
       runbook)
 
-## 6. n8n prompt import (at cutover, with Hoosen)
+## 6. n8n — Eastern Wear workflow (built, inactive)
 
-- [ ] Import `layla-system-prompt.md` + filled `business-rules.md` +
-      `inbound-categories.md` into the live inbound workflow
-- [ ] Confirm `Fetch Products` reads `shopify_products` and telecoms copy is
-      fully out of the live prompt
+- [x] Separate workflow **"Eastern Wear - Layla Inbound AI"** (`XrSnS0xF2bKZPSq1`)
+      with the EW persona, business rules, live Shopify catalogue and no telecoms
+      content. The telecoms workflow is untouched until cutover
+- [ ] **Top up OpenRouter credits.** Every AI call currently fails with 402, so
+      neither workflow can produce real replies
+- [ ] At cutover: activate it, point `N8N_WEBHOOK_URL` at
+      `/webhook/eastern-wear-webhook`, deactivate the telecoms workflow (runbook
+      Phase 1)
 - [ ] Retire/retarget telecoms flows: campaign scheduler, fibre follow-ups,
       `telkom_*` templates
 

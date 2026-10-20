@@ -26,13 +26,20 @@ URL changes, and live-number operations all carry production risk).
 
 ### Eastern Wear readiness
 
-- [ ] `n8n/prompts/business-rules.md` — zero `TODO:` placeholders (all client
-      inputs: shipping fees, courier, delivery times, collection, returns,
-      payment gateway, size guide, business hours)
-- [ ] Eastern Wear persona (`layla-system-prompt.md`), `business-rules.md`, and
-      `inbound-categories.md` **imported into the live inbound workflow**
-      (`kW4ELXolGnYx2AvB`); old telecoms prompt kept in a sticky note inside the
-      workflow for rollback
+- [x] `n8n/prompts/business-rules.md` — TODOs filled from the client email +
+      website policies (20 Oct 2026). Mo to confirm the ⚠ items: collection
+      closing time (16:30 vs 17:00) and the WhatsApp payment gateway
+- [x] Separate Eastern Wear inbound workflow built: **"Eastern Wear - Layla
+      Inbound AI"** (`XrSnS0xF2bKZPSq1`, webhook path `/webhook/eastern-wear-webhook`).
+      Eastern Wear persona + business rules, live `shopify_products` catalogue,
+      telecoms guard in the verifier, writes `message_category`/`order_track`.
+      Kept **inactive** until cutover. The telecoms workflow (`kW4ELXolGnYx2AvB`)
+      is untouched and stays the rollback path
+- [ ] OpenRouter credits topped up and the EW workflow re-tested in manual mode
+      (sales question, imported-order question, "do you sell fibre?" refusal)
+- [ ] Alert recipients/sender in the EW workflow email nodes agreed (currently
+      internal Sif + `keshlan@horizonafrica.co.za` sender; add
+      `orders@easternwearbykersh.com` if the client wants handover emails)
 - [ ] `~15` rewritten WhatsApp templates **APPROVED** in Meta — list them in
       Meta Business Manager and record statuses; none `PENDING`/`REJECTED`
 - [ ] Payment gateway confirmed live (PayFast or Yoco — whichever the client
@@ -40,9 +47,11 @@ URL changes, and live-number operations all carry production risk).
 - [ ] `eastern-wear/phase1` branch deployed to production and verified on the
       live URL (orders page, follow-ups, reports §8 metrics render)
 - [ ] Client branding assets applied (logo/palette) — M7 leftover
-- [ ] Decision recorded in writing: **keep or wipe telecoms data**
-      (leads/conversations/campaigns) — wiping requires Mo's **written**
-      go-ahead and confirmed backups
+- [x] Decision: **keep telecoms data** (Asif, 19 Oct 2026). It stays in
+      Supabase untouched, and a full export was produced for the client:
+      `backups/horizon-africa-data-export-2026-10-20.zip` (CSV + JSON, no
+      secrets) — send via WeTransfer
+- [ ] WeTransfer of the export sent to the client and receipt confirmed
 
 ### Meta / WABA
 
@@ -77,8 +86,16 @@ move. What turns OFF is the Horizon-Africa-specific automation and copy.
 - [ ] Review **"Follow-ups Daily Trigger"** (`YcEUNe5qVam06kps`) — must now
       process **order** follow-ups (M6) not telecoms lead follow-ups; verify the
       pending `follow_ups` rows are Eastern Wear orders, or clear stale rows
-- [ ] In the inbound workflow, confirm the Eastern Wear prompt is active and
-      `Fetch Products` reads `shopify_products` (not the legacy `products` table)
+- [ ] **Switch Layla to the Eastern Wear workflow:**
+      1. Publish/activate `XrSnS0xF2bKZPSq1`
+      2. Set Vercel `N8N_WEBHOOK_URL` →
+         `https://n8n.horizonafrica.co.za/webhook/eastern-wear-webhook` and redeploy
+      3. Deactivate the telecoms workflow `kW4ELXolGnYx2AvB` (do not delete)
+      4. Repoint **Missed Message Recovery** (`PvCdg60gkRYVxYOf`) resubmits to
+         the `eastern-wear-webhook` path
+      5. In the EW workflow `Fetch Conversation History` node, set the
+         `created_at=gte.` cutoff to the cutover timestamp (currently
+         `2026-10-20T00:00:00Z`) so no telecoms-era history reaches Layla
 - [ ] Telecoms templates no longer used by any active workflow
       (`telkom_*`, `hello_world`, `horizon_*` — check workflows + campaign steps)
 
@@ -98,7 +115,7 @@ move. What turns OFF is the Horizon-Africa-specific automation and copy.
 - [ ] Test message → Layla replies with **Eastern Wear persona** (no telecoms
       references anywhere in the reply)
 - [ ] Conversation row created with correct `message_category`
-- [ ] n8n execution succeeded end-to-end (check last execution of `kW4ELXolGnYx2AvB`)
+- [ ] n8n execution succeeded end-to-end (check last execution of `XrSnS0xF2bKZPSq1`)
 - [ ] **Error alerting** fires: trigger a deliberate controlled failure (e.g.
       bad webhook POST) → `webhook-proxy-error` alert email arrives
 - [ ] **Missed Message Recovery** (`PvCdg60gkRYVxYOf`) still active and firing
@@ -111,11 +128,13 @@ move. What turns OFF is the Horizon-Africa-specific automation and copy.
 
 ## Phase 4 — Rollback (only if cutover fails)
 
-- [ ] Re-point the inbound workflow prompt to the telecoms sticky-note copy
+- [ ] Set `N8N_WEBHOOK_URL` back to `/webhook/whatsapp-webhook`, reactivate
+      `kW4ELXolGnYx2AvB`, deactivate `XrSnS0xF2bKZPSq1`
 - [ ] Reactivate Campaign Sequence Engine Trigger + telecoms follow-up paths
 - [ ] Data was never deleted during cutover — telecoms rows remain intact
 - [ ] If DB damage occurred: restore from Supabase native backup (Mo) +
-      `backups/horizon-pre-repurpose-2026-10-16/db/*.json` exports
+      `backups/horizon-pre-repurpose-2026-10-16/db/*.json` and
+      `backups/horizon-africa-handover-2026-10-20/db/*.json` exports
 - [ ] Communicate rollback to client; reschedule cutover
 
 ---
