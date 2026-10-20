@@ -55,7 +55,7 @@ Send each message from the test number to the business line. After each reply, c
 |---|------|-----------------|------|
 | 2.1 | Customer asks about the product via WhatsApp | Layla replies with correct product name, price, and confirms stock (live Shopify check, not stale data) | [ ] |
 | 2.2 | Customer says they want to buy it | Layla collects delivery details (name, address, delivery method) | [ ] |
-| 2.3 | Order created | `POST /api/orders/create` succeeds; Shopify **draft order** exists; inventory reserved; order row in `orders` table with `order_track = stock_on_hand`, status `pending_payment` | [ ] |
+| 2.3 | Order created | `POST /api/orders/create` succeeds; Shopify **draft order** exists; inventory **not** reserved (client terms: no hold before payment); order row in `orders` table with `order_track = stock_on_hand`, status `pending_payment` | [ ] |
 | 2.4 | Payment link | Customer receives a secure payment link in WhatsApp (Shopify invoice URL); Layla never asks for card numbers/bank details | [ ] |
 | 2.5 | Dashboard — Orders page | New order visible with items, total, customer phone, `pending_payment` badge | [ ] |
 | 2.6 | Staff alert | Staff notified of the new order (alert email / staff_alerts) | [ ] |
@@ -69,8 +69,8 @@ Send each message from the test number to the business line. After each reply, c
 - [ ] 2.12 Restore stock.
 
 **Single-unit race (two buyers, one unit):**
-- [ ] 2.13 Set stock to exactly 1. Create order A (payment link issued, unit reserved). Attempt order B for the same variant → B is told it's unavailable. Complete payment for A → succeeds; B still blocked.
-- [ ] 2.14 If A's draft expires unpaid, the reserved unit releases and becomes purchasable again (stale-order expiry path).
+- [ ] 2.13 Set stock to exactly 1. Create order A and order B for the same variant (both get payment links — no reservation). Pay A → succeeds and stock drops to 0. Opening B's link → Shopify checkout refuses (out of stock); Layla/team tells B it has sold.
+- [ ] 2.14 If A's link expires unpaid, the order moves to `expired` and its follow-ups stop; stock was never held so nothing needs releasing.
 
 ---
 

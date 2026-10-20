@@ -27,8 +27,8 @@ URL changes, and live-number operations all carry production risk).
 ### Eastern Wear readiness
 
 - [x] `n8n/prompts/business-rules.md` — TODOs filled from the client email +
-      website policies (20 Oct 2026). Mo to confirm the ⚠ items: collection
-      closing time (16:30 vs 17:00) and the WhatsApp payment gateway
+      website policies (20 Oct 2026). Asif confirmed 20 Oct: collection
+      09:00–17:00, no stock reservation, payment = website checkout
 - [x] Separate Eastern Wear inbound workflow built: **"Eastern Wear - Layla
       Inbound AI"** (`XrSnS0xF2bKZPSq1`, webhook path `/webhook/eastern-wear-webhook`).
       Eastern Wear persona + business rules, live `shopify_products` catalogue,
@@ -37,9 +37,8 @@ URL changes, and live-number operations all carry production risk).
       is untouched and stays the rollback path
 - [ ] OpenRouter credits topped up and the EW workflow re-tested in manual mode
       (sales question, imported-order question, "do you sell fibre?" refusal)
-- [ ] Alert recipients/sender in the EW workflow email nodes agreed (currently
-      internal Sif + `keshlan@horizonafrica.co.za` sender; add
-      `orders@easternwearbykersh.com` if the client wants handover emails)
+- [x] Alert recipients/sender: keep as is, Sif + `keshlan@horizonafrica.co.za`
+      sender (Asif, 20 Oct)
 - [ ] `~15` rewritten WhatsApp templates **APPROVED** in Meta — list them in
       Meta Business Manager and record statuses; none `PENDING`/`REJECTED`
 - [ ] Payment gateway confirmed live (PayFast or Yoco — whichever the client

@@ -287,9 +287,9 @@ interface DraftOrderQueryResult {
  * Create a Shopify draft order and return its invoice (payment) URL.
  *
  * This uses GraphQL rather than the REST DraftOrder resource because only the
- * GraphQL input supports `reserveInventoryUntil`. Holding the stock while the
- * customer has a payment link prevents two Layla conversations from buying the
- * same last unit.
+ * GraphQL input supports `reserveInventoryUntil`. Eastern Wear's terms (client
+ * Template 2) are that stock is NOT reserved before payment, so the order flow
+ * does not pass it; Shopify checkout rejects payment if the unit has sold.
  */
 export async function createDraftOrder(
   lineItems: DraftOrderLineItem[],

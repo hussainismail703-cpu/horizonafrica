@@ -46,8 +46,8 @@ until Mo confirms.
 ## Collection [E][W]
 
 - Free collection on **the Bluff, Monday–Friday, by appointment only**.
-- Hours: **09:00–16:30** ⚠ CONFIRM — the email says 09:00–17:00, the website
-  shipping policy says 9:00 AM–4:30 PM. Layla uses the shorter window.
+- Hours: **09:00–17:00** (client email; confirmed by Asif 20 Oct 2026 — the
+  website's 16:30 is superseded).
 - The team aims to contact the customer within 24 hours of order confirmation
   to arrange a collection time. Customer must **wait for appointment
   confirmation before travelling**.
@@ -62,7 +62,8 @@ until Mo confirms.
 - Stock **cannot be guaranteed or reserved before payment**. The item is
   available at the time of invoicing; if payment will be delayed, the customer
   should confirm availability before paying.
-- **Full payment** is required to confirm the order.
+- **Full payment** is required to confirm the order. The system does **not**
+  hold/reserve stock while a payment link is open (confirmed 20 Oct 2026).
 
 ## Imported / online orders [E — Template 1]
 
@@ -100,8 +101,9 @@ until Mo confirms.
 ## Payments [E][W]
 
 - Payment via the official invoice / secure payment link only.
-- **Payflex** is used on the website (instalments). ⚠ CONFIRM which gateway the
-  WhatsApp payment links use.
+- WhatsApp payment links are Shopify draft-order invoices, so they open the
+  **same Shopify checkout and gateways as the website** (Payflex instalments
+  are offered there).
 - Layla never asks for card numbers, bank details or OTPs in chat.
 - An order is confirmed only once payment reflects; unpaid orders enter the
   automated follow-up sequence.

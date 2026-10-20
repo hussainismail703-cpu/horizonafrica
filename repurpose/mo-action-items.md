@@ -16,16 +16,17 @@ delivery is R120 (3–5 days) and express is R150 (1–3 days). The imported-ord
 and stock-on-hand terms come from Templates 1 and 2. The returns and contact
 details come from the website. Still to confirm:
 
-- [ ] Collection closing time: the email says **17:00**, the website says
-      **16:30** (Layla currently says 16:30)
-- [ ] Which gateway the WhatsApp payment links use (the website shows Payflex)
-- [ ] Template 2 says stock **cannot be reserved before payment**, but the M3
-      order flow reserves Shopify stock while the payment link is open. Keep
-      the reservation or remove it?
+- [x] Collection hours: **09:00–17:00** per the email (Asif, 20 Oct)
+- [x] Stock: **not reserved** before payment, as in Template 2 (Asif, 20 Oct).
+      The M3 reservation has been removed
+- [x] Payment gateway: payment links open the website's Shopify checkout, so
+      they use the same gateway as the website (Payflex shown)
 - [ ] Website Contact page shows `+276824771999` (one digit too many). It
-      should probably be 068 247 7199, which the client should fix in Shopify
-- [ ] No size guide is published. Layla quotes the size from each product
-      description (e.g. "India XL = SA 36") and offers the team for measurements
+      should probably be 068 247 7199. Asif will confirm
+- [x] Alert emails: keep as is, going to Sif from the existing sender
+      (Asif, 20 Oct)
+- Note: no size guide is published. Layla quotes the size from each product
+  description (e.g. "India XL = SA 36") and offers the team for measurements
 
 ## 2. WhatsApp template copy — ~15 rewrites
 

@@ -4,7 +4,7 @@
  *
  * Verifies the real path required by the implementation plan:
  *   API auth/validation → live Shopify stock check → GraphQL draft order +
- *   inventory reservation + invoice URL → Supabase order/events → signed
+ *   invoice URL (no inventory reservation) → Supabase order/events → signed
  *   orders/paid webhook → paid state → dashboard order view → cleanup.
  *
  * Usage:

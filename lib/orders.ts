@@ -286,9 +286,6 @@ export async function createOrder(
     0
   );
   const orderId = crypto.randomUUID();
-  const reservationUntil = new Date(
-    Date.now() + orderLinkTtlHours() * 60 * 60 * 1000
-  ).toISOString();
 
   let draft: DraftOrderResult;
   try {
@@ -304,7 +301,6 @@ export async function createOrder(
       },
       `Layla WhatsApp order ${orderId}`,
       {
-        reserveInventoryUntil: reservationUntil,
         customAttributes: [{ key: "layla_order_id", value: orderId }],
         tags: ["layla", "whatsapp", "stock_on_hand"],
         ...(input.delivery_method === "delivery"
@@ -375,7 +371,7 @@ export async function createOrder(
       detail: {
         shopify_draft_order_id: draft.id,
         shopify_draft_order_name: draft.name,
-        reserve_inventory_until: reservationUntil,
+        inventory_reserved: false,
       },
     },
   ]);
