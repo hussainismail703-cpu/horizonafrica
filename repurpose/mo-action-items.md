@@ -21,8 +21,9 @@ details come from the website. Still to confirm:
       The M3 reservation has been removed
 - [x] Payment gateway: payment links open the website's Shopify checkout, so
       they use the same gateway as the website (Payflex shown)
-- [ ] Website Contact page shows `+276824771999` (one digit too many). It
-      should probably be 068 247 7199. Asif will confirm
+- [x] Correct shop number confirmed as **068 247 7199** (Asif, 20 Oct). The
+      website Contact page still shows `+276824771999` (one digit too many) —
+      needs fixing on the site
 - [x] Layla never gives out the shop number (or any other number). Handovers
       stay in the WhatsApp chat (option a, 20 Oct)
 - [x] Alert emails: keep as is, going to Sif from the existing sender
