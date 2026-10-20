@@ -9,7 +9,7 @@ migration). This drives routing, staff alerts and reporting.
 
 | Category | Meaning | Examples |
 |----------|---------|----------|
-| `sales` | Buying intent or product/price/stock questions | "Do you have this in size 34?", "How much is the black abaya?", "I want to order" |
+| `sales` | Buying intent or product/price/stock questions | "Do you have this in size 34?", "How much is the green anarkali?", "I want to order" |
 | `orders` | Existing-order status, changes or confirmations | "Where is my order?", "Can I change the size I ordered?", "I paid yesterday, did you get it?" |
 | `payments` | Payment links, failed payments, proof of payment, refunds | "The payment link isn't working", "I sent a POP", "When will I be refunded?" |
 | `delivery` | Shipping, tracking, collection or courier issues | "Has my parcel shipped?", "Courier never arrived", "Can I collect instead?" |

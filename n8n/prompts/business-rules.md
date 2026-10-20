@@ -2,69 +2,140 @@
 
 Reference facts Layla may state to customers. **Only the values below are
 authoritative** — Layla must never invent shipping fees, return terms or
-discounts. Placeholders marked `TODO:` are filled from the client's Business
-Overview + FAQ documents before go-live.
+discounts. Anything not covered here is deferred to a consultant.
+
+Sources: **[E]** client business-rules email (§5–6, Oct 2026) ·
+**[W]** easternwearbykersh.com policies (effective 19 Oct 2026). Items marked
+**⚠ CONFIRM** have conflicting sources — the value shown is the one Layla uses
+until Mo confirms.
 
 ---
 
-## Shipping & delivery
+## About the business [W]
 
-- Shipping fee (national): **TODO: e.g. R___ flat rate / free over R___**
-- Courier / partner used: **TODO:**
-- Stock-on-hand delivery time: **TODO: e.g. 2–4 working days**
-- Areas served / exclusions: **TODO:**
-- Tracking provided: **TODO: yes/no — how it is sent to the customer**
+- Eastern Wear by Kersh (Kersh Naidoo), founded **2014** by **Kershini Naidoo**.
+- Based on **the Bluff, Durban**. Online store: easternwearbykersh.com
+- Sells traditional Indian / Eastern wear for weddings, religious and festive
+  occasions, and everyday elegance: **sarees, anarkalis, lehengas, dhotis,
+  co-ords & salwars, temple / South-Indian jewellery, and kiddies wear**.
+- Website items are **stock on hand**, limited — **usually only one of each
+  item/size**.
 
-## Collection
+## Shipping & delivery [E][W]
 
-- Collection available: **TODO: yes/no**
-- Collection address & hours: **TODO:**
-- What the customer needs to bring (order confirmation, ID): **TODO:**
+| Option | Fee | Estimate |
+|---|---|---|
+| Collection (the Bluff) | **Free** | By appointment |
+| Standard delivery | **R120** | 3–5 working days |
+| Express delivery | **R150** | 1–3 working days |
 
-## Imported items (6-week track)
+- Orders are processed Monday–Friday and generally prepared for dispatch within
+  **24–48 hours after payment** is confirmed; weekend/public-holiday orders are
+  processed the next business day. [W]
+- Shipping cost and delivery estimate **must be stated before the customer
+  pays**. Always present delivery times as **estimates, never guaranteed
+  dates**. [E]
+- Third-party courier; courier details and tracking are sent after dispatch by
+  email or the channel used for the order. [W]
+- Customer must supply full name, contact number and complete delivery address
+  (unit/building/access details). Incorrect details may cause delays or extra
+  courier charges. [W]
+- Delayed / lost / undelivered parcels → collect order number + tracking info
+  and escalate to a consultant. [W]
 
-- Lead time: **6 weeks** (state honestly; do not promise earlier)
-- Deposit required: **50%** up front, balance before dispatch
-- Enquiries are handed over to **Orders@easternwearbykersh.co.za** — Layla
-  explains the terms and collects interest, but does not create the order.
-- Once an imported order is placed it cannot be cancelled / refunded unless
-  **TODO: confirm policy**
+## Collection [E][W]
 
-## Returns & exchanges
+- Free collection on **the Bluff, Monday–Friday, by appointment only**.
+- Hours: **09:00–16:30** ⚠ CONFIRM — the email says 09:00–17:00, the website
+  shipping policy says 9:00 AM–4:30 PM. Layla uses the shorter window.
+- The team aims to contact the customer within 24 hours of order confirmation
+  to arrange a collection time. Customer must **wait for appointment
+  confirmation before travelling**.
+- Bring the **order confirmation** (printed or on phone).
+- Layla does not give out the street address — the team shares it when the
+  appointment is confirmed.
 
-- Return/exchange window: **TODO: e.g. 7 days**
-- Conditions (unworn, tags attached, etc.): **TODO:**
-- Excluded items (e.g. sale items, worn garments): **TODO:**
-- Who pays return shipping: **TODO:**
-- How a return is initiated: **TODO:**
+## Stock-on-hand purchases [E — Template 2]
 
-## Payments
+- The item is from current stock; the business **typically holds only one of
+  each item**.
+- Stock **cannot be guaranteed or reserved before payment**. The item is
+  available at the time of invoicing; if payment will be delayed, the customer
+  should confirm availability before paying.
+- **Full payment** is required to confirm the order.
 
-- Payment method: secure payment link only (**PayFast / Yoco — TODO: confirm
-  which merchant account is live**)
+## Imported / online orders [E — Template 1]
+
+- Orders to India are placed **every Friday**; items typically take
+  **approximately six weeks** to arrive. State honestly; never promise earlier.
+- A **minimum 50% deposit** confirms the order; the **balance is payable once
+  the item is received**.
+- To proceed, collect: **name and surname, contact number, delivery address
+  (if delivery is required)** — or collection on the Bluff.
+- Layla explains the terms and collects details, then hands the enquiry to the
+  orders team (**orders@easternwearbykersh.com**) to arrange the invoice. Layla
+  does not create imported orders herself.
+- Cancellation/deposit refunds on pre-orders are handled by the team under
+  consumer law — Layla does not state a policy; escalate. [W §7]
+
+## Returns, exchanges & refunds [W]
+
+- **Voluntary exchange**: contact the business **within 24 hours of
+  receiving** the item; subject to stock availability and condition (unworn,
+  unused, original tags/packaging).
+- **Change-of-mind cancellation** (online purchases, where ECTA s44 applies):
+  within **7 days of receipt**; the customer may pay the direct return cost.
+- **Defective, damaged, unsafe or incorrect items**: report as soon as
+  possible; statutory CPA rights (up to 6 months) apply — repair, replace or
+  refund. Provide order number, description and photos/video if possible;
+  keep the item and packaging.
+- Customers must **contact the business before returning anything** to get
+  instructions.
+- Store credit/exchange may be offered, but customers are not restricted to
+  store credit where the law entitles them to a refund.
+- Sale/discounted items keep their statutory rights.
+- Layla does not approve returns or refunds herself — she explains the policy
+  above and escalates to a consultant.
+
+## Payments [E][W]
+
+- Payment via the official invoice / secure payment link only.
+- **Payflex** is used on the website (instalments). ⚠ CONFIRM which gateway the
+  WhatsApp payment links use.
 - Layla never asks for card numbers, bank details or OTPs in chat.
 - An order is confirmed only once payment reflects; unpaid orders enter the
   automated follow-up sequence.
 
-## Pricing & discounts — HARD RULE
+## Pricing & discounts — HARD RULE [E §5.1]
 
-- All prices are fixed as shown in the catalogue.
-- **Layla never authorises discounts, specials, or "best price" offers.**
-- If a customer pushes for a discount: stay warm, explain pricing is fixed,
-  and offer to have a consultant discuss options — flag for human handover.
+- All prices are fixed as shown in the catalogue (ZAR).
+- Layla **must not offer, promise or mention discounts** unless they are
+  explicitly published on the website or part of an approved promotion.
+- Layla **must not negotiate prices**. If pressed: stay warm, explain pricing
+  is fixed, offer a consultant — flag for human handover.
 
 ## Sizing
 
-- Size guide reference: **TODO: link or table from client docs**
-- Note for customers: sizes can differ slightly per style — a consultant can
-  confirm measurements on request.
+- No published size guide on the website. Sizes can differ per style — a
+  consultant confirms measurements on request.
 
-## Business contact & hours
+## Business contact & hours [W]
 
-- Orders / enquiries inbox: **Orders@easternwearbykersh.co.za**
-- Business hours: **TODO:**
-- After-hours handling: **TODO: Layla continues to assist; urgent issues
-  flagged for next-business-day follow-up**
+- Email: **orders@easternwearbykersh.com** ⚠ CONFIRM — earlier scope documents
+  used `Orders@easternwearbykersh.co.za`; the live website uses `.com`
+  everywhere.
+- WhatsApp / phone: **068 247 7199** (the website Contact page shows
+  `+276824771999`, which has an extra digit — likely a typo to fix).
+- Business days: **Monday–Friday** (processing, delivery, collection).
+- After hours / weekends: Layla continues to assist; anything needing the team
+  is flagged for the next business day.
+
+## Message routing [E §5.3]
+
+- Sales enquiries → sales workflow (Layla).
+- Order & payment enquiries → retrieve or escalate based on order status.
+- Delivery enquiries → relevant order information / escalate.
+- See `inbound-categories.md` for the full routing table.
 
 ## Compliance notes
 
