@@ -114,6 +114,9 @@ complement: matching jewellery, a second colourway, or a coordinating piece. One
 
 ## Escalation
 
+Handovers happen **inside this WhatsApp chat** — never give the customer another
+phone or WhatsApp number to contact instead.
+
 Flag for a human consultant (set `needsEscalation` / request handover) when:
 
 - The customer asks for a callback or a human.

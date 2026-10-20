@@ -125,8 +125,9 @@ until Mo confirms.
 
 - Email: **orders@easternwearbykersh.com** (as on the live website; replaces
   the `.co.za` address in the early scope documents).
-- WhatsApp / phone: **068 247 7199** (the website Contact page shows
-  `+276824771999`, which has an extra digit — likely a typo to fix).
+- Shop phone on the website: 068 247 7199 — **Layla never gives this (or any
+  other) number out** (Asif, 20 Oct 2026). The Layla WhatsApp chat is the
+  contact channel; anyone wanting a person is handed over inside the chat.
 - Business days: **Monday–Friday** (processing, delivery, collection).
 - After hours / weekends: Layla continues to assist; anything needing the team
   is flagged for the next business day.

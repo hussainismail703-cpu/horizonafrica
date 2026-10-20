@@ -23,6 +23,8 @@ details come from the website. Still to confirm:
       they use the same gateway as the website (Payflex shown)
 - [ ] Website Contact page shows `+276824771999` (one digit too many). It
       should probably be 068 247 7199. Asif will confirm
+- [x] Layla never gives out the shop number (or any other number). Handovers
+      stay in the WhatsApp chat (option a, 20 Oct)
 - [x] Alert emails: keep as is, going to Sif from the existing sender
       (Asif, 20 Oct)
 - Note: no size guide is published. Layla quotes the size from each product
