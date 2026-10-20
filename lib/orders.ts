@@ -545,7 +545,7 @@ export type CreateImportedOrderResult =
  * Imported/online order track (scope freeze §4.4): the customer wants an item
  * that is ordered in rather than held in stock. Layla explains the 6-week
  * lead time + 50% deposit terms, confirms intent, and n8n hands the enquiry
- * to Orders@easternwearbykersh.co.za. No Shopify draft order or payment link
+ * to orders@easternwearbykersh.com. No Shopify draft order or payment link
  * is created — the order lands directly in 'handed_to_orders' for the team.
  */
 export async function createImportedOrder(
@@ -625,7 +625,7 @@ export async function createImportedOrder(
     detail: {
       item_description: description,
       notes,
-      handover_target: "Orders@easternwearbykersh.co.za",
+      handover_target: "orders@easternwearbykersh.com",
       terms: "6-week lead time + 50% deposit",
     },
   });

@@ -80,7 +80,7 @@ Send each message from the test number to the business line. After each reply, c
 |---|------|-----------------|------|
 | 3.1 | Customer asks for an item Layla identifies as imported/online-order | Layla explains terms: **6-week lead time**, **50% deposit up front**, balance before dispatch — states lead time honestly, does not promise earlier | [ ] |
 | 3.2 | Customer wants to proceed | Enquiry recorded via `/api/orders/imported` → order row with `order_track = imported`, status `handed_to_orders`; **no Shopify draft order created** | [ ] |
-| 3.3 | Handover | Enquiry handed to `Orders@easternwearbykersh.co.za` (n8n/Brevo email) with customer + item details | [ ] |
+| 3.3 | Handover | Enquiry handed to `orders@easternwearbykersh.com` (n8n/Brevo email) with customer + item details | [ ] |
 | 3.4 | Dashboard — Orders | Imported order visible, filterable by track; shows `handed_to_orders` status | [ ] |
 | 3.5 | Separate reporting | Reports page splits order counts by track (`stock_on_hand` vs `imported`) | [ ] |
 | 3.6 | `order_track` set on the conversation and lead for the imported enquiry | [ ] |

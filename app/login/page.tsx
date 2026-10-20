@@ -171,7 +171,7 @@ export default function LoginPage() {
             <p className="text-[13px] text-on-surface-variant">
               Don&apos;t have an account?{" "}
               <a
-                href="mailto:Orders@easternwearbykersh.co.za"
+                href="mailto:orders@easternwearbykersh.com"
                 className="font-semibold text-secondary transition-colors hover:underline"
               >
                 Contact Administrator

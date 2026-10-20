@@ -121,9 +121,8 @@ until Mo confirms.
 
 ## Business contact & hours [W]
 
-- Email: **orders@easternwearbykersh.com** ⚠ CONFIRM — earlier scope documents
-  used `Orders@easternwearbykersh.co.za`; the live website uses `.com`
-  everywhere.
+- Email: **orders@easternwearbykersh.com** (as on the live website; replaces
+  the `.co.za` address in the early scope documents).
 - WhatsApp / phone: **068 247 7199** (the website Contact page shows
   `+276824771999`, which has an extra digit — likely a typo to fix).
 - Business days: **Monday–Friday** (processing, delivery, collection).
