@@ -69,7 +69,9 @@ details come from the website. Still to confirm:
 
 ## 6. n8n — Eastern Wear workflow (built, inactive)
 
-- [x] Separate workflow **"Eastern Wear - Layla Inbound AI"** (`XrSnS0xF2bKZPSq1`)
+- [x] Separate workflows: **"Eastern Wear - Layla Inbound AI"** (`XrSnS0xF2bKZPSq1`)
+      and **"Eastern Wear - Layla Follow-up Sender"** (`6910G5ugptqI0pHC`,
+      uses `ew_followup_nudge`)
       with the EW persona, business rules, live Shopify catalogue and no telecoms
       content. The telecoms workflow is untouched until cutover
 - [ ] **Top up OpenRouter credits.** Every AI call currently fails with 402, so

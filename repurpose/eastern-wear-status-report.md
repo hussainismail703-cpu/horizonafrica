@@ -104,8 +104,9 @@ no Bluff street address in any template.
 
 **Our side:**
 - Top up OpenRouter credits (all AI calls currently fail 402)
-- Re-run `tests/order-flow-test.mjs` post no-reservation change
-- Build EW version of the follow-up sender workflow (offered; pending)
+- ~~Re-run `tests/order-flow-test.mjs`~~ done — 25/25 pass (2 Nov). Synced a
+  stale Shopify price the test caught (Bhahubali R220→R168)
+- ~~Build EW follow-up sender~~ done — `6910G5ugptqI0pHC`, inactive
 - Download Supabase native backup
 - Rotate the Chatwoot token sitting in old git history **before pushing**
 - Push branch + open PR once history is clean
