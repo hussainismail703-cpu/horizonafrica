@@ -87,9 +87,7 @@ no Bluff street address in any template.
 ### 4c. What each side still needs to do
 
 - **Asif:** approved the 10 drafts (2 Nov).
-- **Meta:** all 10 submitted 2 Nov — status PENDING. Approvals typically
-  land within 24–48h each, in parallel; track in the dashboard template
-  manager or Meta Business Suite.
+- **Meta:** all 10 **APPROVED** (2 Nov). Ready to wire in at cutover.
 - **At cutover:** set `ORDER_FOLLOWUP_TEMPLATES=ew_payment_reminder_1,…,2,…,3`,
   retarget the follow-up sender at `ew_followup_nudge`, verify no active
   workflow references `telkom_*`/`horizon_*`.

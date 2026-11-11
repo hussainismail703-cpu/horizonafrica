@@ -37,9 +37,10 @@ details come from the website. Still to confirm:
       §5 rules) is loaded in `n8n/prompts/business-rules.md`
 - [x] Asif approved the drafted set in
       `repurpose/ew-meta-templates-draft.md` (2 Nov)
-- [x] All 10 submitted to Meta (2 Nov) — status PENDING; approval typically
-      24–48h each, running in parallel. Check in the dashboard's template
-      manager or Meta Business Suite
+- [x] All 10 **APPROVED** in Meta (2 Nov): `ew_order_confirmation`,
+      `ew_payment_reminder_1/2/3`, `ew_collection_reminder`,
+      `ew_imported_order_update`, `ew_campaign_intro`, `ew_reengagement`,
+      `ew_followup_nudge`, `ew_imported_terms`
 
 ## 3. Branding assets
 

@@ -6,8 +6,7 @@ outside the 24-hour reply window — Layla's normal chat replies don't need them
 
 Replace the telecoms templates currently in Meta (`telkom_fibre_packages`,
 `telkom_reengagement`, `horizon_followup_v6`, …). Drafted in the client's voice
-(Templates 1 & 2 from the business document). **Asif approved the copy (2 Nov) — all 10 submitted to Meta and now PENDING
-approval (typically 24–48h each, in parallel).**
+(Templates 1 & 2 from the business document). **Asif approved the copy; all 10 submitted and APPROVED by Meta (2 Nov).**
 
 Meta rules applied: lowercase names, `{{n}}` variables, body under 1024
 characters, UTILITY category for order/payment notices, MARKETING for
