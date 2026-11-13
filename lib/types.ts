@@ -276,7 +276,7 @@ export interface MessageDeliveryFailure {
 }
 
 // ---------------------------------------------------------------------------
-// Calling Queue + Opt-out types (Fibre Re-Engagement extension)
+// Calling Queue + Opt-out types (campaign re-engagement extension)
 // ---------------------------------------------------------------------------
 
 export type QueueStatus = "pending" | "called" | "converted" | "lost" | "callback_scheduled";

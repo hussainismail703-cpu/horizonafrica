@@ -6,7 +6,7 @@ import { extractStatusUpdates, recordDeliveryFailures, recordDeliveryStatuses } 
 import { isHumanTakeover } from "@/lib/handover";
 import { createServiceClient } from "@/lib/supabase/service";
 
-const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN ?? "horizon_africa_verify_2026";
+const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN;
 const N8N_WEBHOOK_URL =
   process.env.N8N_WEBHOOK_URL ?? "https://n8n.horizonafrica.co.za/webhook/whatsapp-webhook";
 const N8N_ERROR_WEBHOOK_URL =

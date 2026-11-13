@@ -22,17 +22,23 @@ export function followUpHours(): number[] {
 }
 
 /**
- * Template per nudge step. Falls back to the approved 2-param follow-up
- * template until Eastern Wear order-reminder templates are approved.
+ * Template per nudge step. The approved Eastern Wear sequence is used unless
+ * ORDER_FOLLOWUP_TEMPLATES explicitly overrides it.
  */
+const DEFAULT_ORDER_FOLLOWUP_TEMPLATES = [
+  "ew_payment_reminder_1",
+  "ew_payment_reminder_2",
+  "ew_payment_reminder_3",
+];
+
 export function followUpTemplates(): string[] {
   const raw =
-    process.env.ORDER_FOLLOWUP_TEMPLATES ?? "horizon_followup_v6";
+    process.env.ORDER_FOLLOWUP_TEMPLATES ?? DEFAULT_ORDER_FOLLOWUP_TEMPLATES.join(",");
   const names = raw
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
-  return names.length ? names : ["horizon_followup_v6"];
+  return names.length ? names : DEFAULT_ORDER_FOLLOWUP_TEMPLATES;
 }
 
 function templateForStep(step: number): string {

@@ -4,6 +4,7 @@ node_modules/
 # next.js
 .next/
 .next-proxy/
+.next-ew-test/
 out/
 
 # env files
@@ -32,6 +33,7 @@ workflow-inbound-ai-v2-backup-*.json
 
 # test artifacts
 tests/screenshots/
+tests/shots/
 tests/test-results.json
 tests/*-results.json
 backups/

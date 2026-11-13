@@ -44,7 +44,7 @@ export interface CampaignStats {
   completedEnrolled: number;
   respondedEnrolled: number;
   removedEnrolled: number;
-  // Funnel metrics (Fibre Re-Engagement extension)
+  // Funnel metrics (campaign re-engagement extension)
   engagedCount: number; // needs_information classification (engagement signal)
   interestedCount: number; // interested classification (sales-qualified)
   callbackRequestedCount: number; // callback_requested classification

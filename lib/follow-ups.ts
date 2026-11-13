@@ -5,7 +5,7 @@ const META_API_VERSION = process.env.META_API_VERSION ?? "v21.0";
 const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID!;
 const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN!;
 
-const FOLLOW_UP_TEMPLATE = "horizon_followup_v6";
+const FOLLOW_UP_TEMPLATE = process.env.LEAD_FOLLOWUP_TEMPLATE ?? "ew_followup_nudge";
 
 interface MetaSendResponse {
   messaging_product: string;

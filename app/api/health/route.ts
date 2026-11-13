@@ -340,7 +340,16 @@ async function checkChatwoot(): Promise<ServiceCheck> {
 async function checkWebhookProxy(): Promise<ServiceCheck> {
   const start = Date.now();
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dashboard.horizonafrica.co.za";
-  const verifyToken = process.env.META_VERIFY_TOKEN ?? "horizon_africa_verify_2026";
+  const verifyToken = process.env.META_VERIFY_TOKEN;
+
+  if (!verifyToken) {
+    return {
+      name: "WhatsApp Webhook Proxy",
+      status: "down",
+      latencyMs: null,
+      message: "META_VERIFY_TOKEN not configured",
+    };
+  }
 
   try {
     const res = await fetch(`${baseUrl}/api/whatsapp-webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(verifyToken)}&hub.challenge=healthcheck`, {

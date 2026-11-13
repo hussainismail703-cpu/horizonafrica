@@ -13,19 +13,19 @@ interface IntegrationStatus {
 const integrations: IntegrationStatus[] = [
   {
     name: "OpenRouter AI",
-    description: "Powers the Layla AI assistant for lead qualification (GPT-5.6-sol)",
+    description: "Powers the Layla assistant for customer conversations and order support",
     status: "connected",
     icon: Bot,
   },
   {
     name: "Brevo Email",
-    description: "Sends hot lead email alerts to staff",
+    description: "Sends customer and staff email alerts",
     status: "connected",
     icon: Mail,
   },
   {
     name: "Google Sheets",
-    description: "Syncs lead data to Google Sheets for reporting",
+    description: "Syncs customer and order data to Google Sheets for reporting",
     status: "not-configured",
     icon: Sheet,
   },
