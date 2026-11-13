@@ -169,9 +169,9 @@ export async function POST(request: NextRequest) {
     // campaign interaction / broadcast message so delivery and read-rate
     // metrics reflect reality, persist failures for visibility, and alert
     // staff on failures — otherwise they are silently marked as sent.
-    if (parsed) {
+    const statuses = parsed ? extractStatusUpdates(parsed) : [];
+    if (statuses.length > 0) {
       try {
-        const statuses = extractStatusUpdates(parsed);
         await recordDeliveryStatuses(statuses);
         const failures = await recordDeliveryFailures(statuses);
         for (const f of failures) {
@@ -183,6 +183,14 @@ export async function POST(request: NextRequest) {
       } catch {
         // Status logging must never block forwarding
       }
+    }
+
+    // Status-only callbacks carry no customer message — they've been
+    // recorded above, so ack Meta now instead of forwarding. Each delivery
+    // receipt forwarded to n8n would burn a workflow execution that has no
+    // inbound message to process.
+    if (parsed && !inbound && statuses.length > 0) {
+      return NextResponse.json({ ok: true, status_callback: true });
     }
 
     // Human handover (§4.6): when a team member owns this conversation, flag

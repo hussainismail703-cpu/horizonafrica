@@ -311,12 +311,15 @@ async function run() {
           } else fail(name, `HTTP ${r.status} — ${JSON.stringify(r.body)?.slice(0, 120)}`);
         } catch (e) { fail(name, e.message); }
       }
-      // CSV downloads
-      for (const [p, label] of [["/api/leads/export", "leads CSV export"], ["/api/broadcasts/contacts/template", "contacts template CSV"]]) {
+      // File downloads — leads export is CSV, contacts template is XLSX
+      for (const [p, label, matcher] of [
+        ["/api/leads/export", "leads CSV export", (ct) => ct.includes("csv") || ct.includes("text")],
+        ["/api/broadcasts/contacts/template", "contacts template XLSX", (ct) => ct.includes("spreadsheetml") || ct.includes("octet-stream")],
+      ]) {
         try {
           const r = await sapi(p);
           const ct = r.headers["content-type"] || "";
-          if (r.status === 200 && (ct.includes("csv") || ct.includes("text"))) pass(label, ct);
+          if (r.status === 200 && matcher(ct)) pass(label, ct);
           else if (r.status === 200) warn(label, `200 but content-type ${ct}`);
           else fail(label, `HTTP ${r.status}`);
         } catch (e) { fail(label, e.message); }
