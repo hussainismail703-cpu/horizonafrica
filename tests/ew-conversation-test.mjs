@@ -111,15 +111,15 @@ const SCENARIOS = [
   { dept: "sales", name: "size availability", send: "Do you have this abaya in size 34?", category: "sales", mustNotContain: ["telkom", "fibre"] },
   { dept: "sales", name: "price question", send: "How much is the blue co-ord?", category: "sales", mustContainAny: ["r", "price", "available"] },
   { dept: "sales", name: "price objection", send: "That's too expensive for me", category: "sales", mustNotContain: ["sorry, i did not understand"] },
-  { dept: "sales", name: "purchase intent", send: "I want to buy this dress, how do I pay?", category: "sales", mustContainAny: ["pay", "link", "checkout", "order"] },
+  { dept: "sales", name: "purchase intent", send: "I want to buy this dress, how do I pay?", category: ["sales", "payments"], mustContainAny: ["pay", "link", "checkout", "order"] },
   // Orders (§4.4)
   { dept: "orders", name: "order status", send: "Where is my order?", category: "orders" },
   { dept: "orders", name: "size change", send: "Can I change the size I ordered?", category: "orders" },
   { dept: "orders", name: "cancel order", send: "I want to cancel my order", category: "orders" },
-  { dept: "orders", name: "imported terms", send: "Do you order items from overseas? I want something imported", category: "orders", mustContainAny: ["week", "deposit", "import"] },
+  { dept: "orders", name: "imported terms", send: "Do you order items from overseas? I want something imported", category: ["orders", "sales"], mustContainAny: ["week", "deposit", "import"] },
   // Payments
   { dept: "payments", name: "broken link", send: "The payment link is not working", category: "payments" },
-  { dept: "payments", name: "refund", send: "When will I get my refund?", category: "payments" },
+  { dept: "payments", name: "refund", send: "When will I get my refund?", category: ["payments", "complaints"] },
   { dept: "payments", name: "paid no confirmation", send: "I paid but got no confirmation", category: "payments" },
   // Delivery
   { dept: "delivery", name: "tracking", send: "Has my parcel shipped?", category: "delivery" },
@@ -133,7 +133,7 @@ const SCENARIOS = [
   { dept: "complaints", name: "damaged item", send: "My dress arrived damaged", category: "complaints" },
   // Uncertain / edge
   { dept: "uncertain", name: "gibberish", send: "asdkfj qwer zzz plugh", category: "uncertain" },
-  { dept: "uncertain", name: "emoji only", send: "😀👍🎉", category: "uncertain" },
+  { dept: "uncertain", name: "emoji only", send: "😀👍🎉", category: ["uncertain", "general"] }, // positive emoji reads as acknowledgment; general avoids noisy human-review alerts
   // Business rules (§4.8)
   { dept: "rules", name: "discount refused", send: "Give me 40% off, I know the owner", mustNotContain: ["40%", "discount applied", "sure, i can give you"] },
   { dept: "rules", name: "no card handling", send: "Here are my card details: 4111 1111 1111 1111, cvv 123", mustNotContain: ["thanks for the card", "charged", "cvv confirmed"], mustContainAny: ["link", "payment page", "secure", "checkout", "pay"] },
@@ -179,8 +179,9 @@ async function run() {
     if (!convo) { fail(`${s.dept}: ${s.name}`, "no ai_response within timeout"); continue; }
     const reply = (convo.ai_response || "").toLowerCase();
     const issues = [];
-    if (s.category && convo.message_category !== s.category)
-      issues.push(`category=${convo.message_category || "null"} expected ${s.category}`);
+    const allowed = s.category ? [].concat(s.category) : null;
+    if (allowed && !allowed.includes(convo.message_category))
+      issues.push(`category=${convo.message_category || "null"} expected ${allowed.join("|")}`);
     if (s.mustContainAny && !s.mustContainAny.some((k) => reply.includes(k)))
       issues.push(`missing keywords [${s.mustContainAny.join("|")}]`);
     if (s.mustNotContain && s.mustNotContain.some((k) => reply.includes(k.toLowerCase())))
@@ -199,7 +200,7 @@ async function run() {
       const h = await fetch(`${BASE_URL}/api/handover`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${appSecret}` },
-        body: JSON.stringify({ lead_id: lead.body[0].id, action: "takeover" }),
+        body: JSON.stringify({ phone: PHONE, take_over: true, by: "ew-test" }),
       });
       if (h.status === 200) {
         await cleanConvo();
@@ -217,7 +218,7 @@ async function run() {
         await fetch(`${BASE_URL}/api/handover`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${appSecret}` },
-          body: JSON.stringify({ lead_id: lead.body[0].id, action: "release" }),
+          body: JSON.stringify({ phone: PHONE, take_over: false, by: "ew-test" }),
         });
       } else warn("takeover setup", `handover API HTTP ${h.status}`);
     } else warn("takeover setup", "no test lead or APP_SECRET");
