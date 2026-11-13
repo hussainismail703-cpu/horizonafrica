@@ -106,6 +106,14 @@ move. What turns OFF is the Horizon-Africa-specific automation and copy.
       - Meta webhook callback URL + re-verify (GET challenge)
       - n8n HTTP nodes calling the app (process, handover, follow-ups, orders)
       - `APP_URL`/callback env vars in Vercel
+- [ ] Set EW follow-up env vars in Vercel (both are inert on the telecom
+      build — `order-follow-ups.ts` doesn't exist there and telecom
+      `follow-ups.ts` hardcodes `horizon_followup_v6` — so they may be
+      pre-staged any time before the deploy):
+      - `ORDER_FOLLOWUP_TEMPLATES=ew_payment_reminder_1,ew_payment_reminder_2,ew_payment_reminder_3`
+      - `LEAD_FOLLOWUP_TEMPLATE=ew_followup_nudge`
+      (code defaults already match; set explicitly so no stale `horizon_*`
+      override can ever take effect)
 - [ ] Verify Meta GET verification passes on the live domain
 - [ ] Send a test inbound message from a tester number to the live line
 
